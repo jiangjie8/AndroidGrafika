@@ -17,6 +17,10 @@ namespace av{
             m_codec_ctx.reset();
             return -1;
         }
+
+        if (!m_codec_ctx->channel_layout)
+            m_codec_ctx->channel_layout = av_get_default_channel_layout(m_codec_ctx->channels);
+
         return 0;
     }
 

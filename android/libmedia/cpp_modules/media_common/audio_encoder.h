@@ -25,7 +25,6 @@ public:
     int openCoder(const AVCodecParameters *parm);
     int sendFrame(const AVFrame *frame);
     int receivPacket(AVPacket *avpkt);
-    int encode_audio(AVPacket *packet, const AVFrame *frame);
     int flushCodec(AVPacket *avpkt);
     void closeCoder(){
         m_codec_ctx.reset();
@@ -34,7 +33,8 @@ public:
     const AVCodecContext *getCodecContext(){
         return m_codec_ctx.get();
     }
-
+private:
+    //    int encode_audio(AVPacket *packet, const AVFrame *frame);
 };
 }
 #endif  // MODULES_AUDIO_CODING_CODECS_AUDIO_ENCODER_H_

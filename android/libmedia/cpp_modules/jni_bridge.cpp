@@ -139,7 +139,7 @@ JNIEXPORT jint JNICALL demuxer_writePacket(JNIEnv *env, jclass clazz, jlong engi
 
 JNIEXPORT jint JNICALL demuxer_getMediaInfo(JNIEnv *env, jclass clazz, jlong engineHandle, jobject packet) {
     av::FFRecoder *engine = reinterpret_cast<av::FFRecoder*>(engineHandle);
-    return engine->probeMediaInfo(env, packet);
+    return engine->getMediaInfo(env, packet);
 }
 
 

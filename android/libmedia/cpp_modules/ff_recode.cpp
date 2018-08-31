@@ -80,7 +80,7 @@ namespace av{
         }
         m_inputFormat.reset(ifmt_ctx);
         ifmt_ctx = nullptr;
-        getMediaInfo();
+        probeMedia();
 
         for(int i = 0; i < m_inputFormat->nb_streams; i++){
             if(m_inputFormat->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
@@ -92,17 +92,21 @@ namespace av{
         const AVCodecParameters *codecParameters = getCodecParameters(AVMEDIA_TYPE_AUDIO);
         if(codecParameters != nullptr){
             m_audio_decoder.reset(new AudioDecoder());
-            m_audio_decoder->openCoder(codecParameters);
+            if(m_audio_decoder->openCoder(codecParameters) < 0)
+                m_audio_decoder.reset();
 
             m_audio_encoder.reset(new AudioEncoder());
-            m_audio_encoder->openCoder(codecParameters);
+            if(m_audio_encoder->openCoder(codecParameters) < 0)
+                m_audio_encoder.reset();
+
+            init_filter(m_audio_decoder->getCodecContext(), m_audio_encoder->getCodecContext(), "anull");
         }
 
         return ret;
     }
 
 
-    int FFRecoder::probeMediaInfo(JNIEnv *env, jobject object) {
+    int FFRecoder::getMediaInfo(JNIEnv *env, jobject object) {
 
         J4A_MediaInfo_setFiled_bitrate(env, object, m_stream_info.bitrate);
         J4A_MediaInfo_setFiled_duration(env, object, m_stream_info.duration);
@@ -146,8 +150,7 @@ namespace av{
         }
 
         if(m_audio_codecParam.sample_rate > 0 &&
-           m_audio_codecParam.channels > 0){
-
+           m_audio_codecParam.channels > 0 && m_audio_encoder != nullptr){
             AVCodecParameters *codecpar =  avcodec_parameters_alloc();
             avcodec_parameters_from_context(codecpar, m_audio_encoder->getCodecContext());
             a_index = m_muxer->addStream(codecpar);
@@ -159,6 +162,12 @@ namespace av{
         ret = m_muxer->writeHeader();
         return ret;
 
+    }
+
+    int FFRecoder::closeOutputFormat(){
+        m_muxer->closeOutputForamt();
+        m_muxer.reset();
+        return 0;
     }
 
 
@@ -187,13 +196,6 @@ namespace av{
             av_packet_rescale_ts(packet.get(), stream_timebae, AV_TIME_BASE_Q);
             applyBitstream(packet.get());
 
-//            if(packet->pts > 5000000){
-//                ret = av_seek_frame(ifmt_ctx, -1, 0, 0);
-//            }
-//            static int64_t pts = 0;
-//            pts += 33333;
-//            packet->pts = packet->dts = pts;
-
             if (J4A_set_avpacket(env, packet_obj, packet->data, packet->size, packet->pts,
                                  packet->dts, mediaType) < 0) {
                 ALOGE("GetDirectBufferAddress error");
@@ -208,10 +210,6 @@ namespace av{
             return -1;
         }
         if(mediaType == AVMEDIA_TYPE_AUDIO && m_get_spspps){
-//            static int64_t pts = 0;
-//            pts += packet->duration;
-//            packet->pts = packet->dts = pts;
-
             ret = recodeWriteAudio(packet.get());
         }
 
@@ -270,16 +268,45 @@ namespace av{
         else if( ret < 0){
             ALOGE("avcodec_receive_frame error");
         }
-        else{
-            aframe->pts = aframe->best_effort_timestamp;
-            aframe->pts = av_rescale_q(aframe->pts, m_audio_decoder->getCodecContext()->time_base,
-                                       m_audio_encoder->getCodecContext()->time_base);
-            ret = drainAudioEncoder(aframe.get());
+        else if(m_audio_encoder != nullptr){
+
+            ret = av_buffersrc_add_frame_flags(m_buffersrc_ctx, aframe.get(), 0);
+            if (ret < 0) {
+                ALOGE("Error while feeding the filtergraph\n");
+                return ret;
+            }
+
+            while (1) {
+                std::unique_ptr<AVFrame, AVFrameDeleter> filt_frame(av_frame_alloc());
+                if (!filt_frame) {
+                    ret = AVERROR(ENOMEM);
+                    break;
+                }
+                ret = av_buffersink_get_frame(m_buffersink_ctx, filt_frame.get());
+                if (ret < 0) {
+                    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+                        ret = 0;
+                    filt_frame.reset();
+                    break;
+                }
+
+                filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
+                ret = drainAudioEncoder(filt_frame.get());
+
+                if (ret < 0)
+                    break;
+            }
+
+
+
+
         }
         return ret;
     }
 
     int FFRecoder::drainAudioEncoder(const AVFrame *frame){
+        if(m_audio_encoder == nullptr)
+            return AVERROR_EOF;
         int ret = 0;
         std::unique_ptr<AVPacket, AVPacketDeleter> aPacket(av_packet_alloc());
         if(frame != nullptr){
@@ -287,9 +314,7 @@ namespace av{
             if(ret < 0){
                 ALOGE("avcodec_send_frame error");
             }
-
             ret = m_audio_encoder->receivPacket(aPacket.get());
-
         }
         else{
             ret = m_audio_encoder->flushCodec(aPacket.get());
@@ -310,7 +335,7 @@ namespace av{
         return ret;
     }
 
-    int FFRecoder::getMediaInfo() {
+    int FFRecoder::probeMedia() {
         if (m_inputFormat == nullptr)
             return -1;
         AVFormatContext *ifmt_ctx = m_inputFormat.get();
@@ -326,7 +351,8 @@ namespace av{
                 m_video_codecParam.height = stream->codecpar->height;
                 m_video_codecParam.frame_rate = av_q2d(stream->avg_frame_rate);
 
-            } else if (mediaType == AVMEDIA_TYPE_AUDIO) {
+            }
+            else if (mediaType == AVMEDIA_TYPE_AUDIO) {
                 m_audio_codecParam.codec_id = stream->codecpar->codec_id;
                 m_audio_codecParam.channels = stream->codecpar->channels;
                 m_audio_codecParam.sample_rate = stream->codecpar->sample_rate;
@@ -339,14 +365,120 @@ namespace av{
 
 
     const AVCodecParameters* FFRecoder::getCodecParameters(enum AVMediaType type){
-        AVFormatContext *ifmt_ctx = m_inputFormat.get();
-        for (int i = 0; i < ifmt_ctx->nb_streams; i++) {
-            AVStream *stream = ifmt_ctx->streams[i];
+        for (int i = 0; i < m_inputFormat->nb_streams; i++) {
+            AVStream *stream = m_inputFormat->streams[i];
             AVMediaType mediaType = stream->codecpar->codec_type;
             if(mediaType == type){
                 return stream->codecpar;
             }
         }
         return nullptr;
+    }
+
+    int FFRecoder::init_filter(const AVCodecContext *dec_ctx, const AVCodecContext *enc_ctx, const char *filter_spec){
+        char args[512] = {0};
+        int ret = 0;
+        const AVFilter *buffersrc = NULL;
+        const AVFilter *buffersink = NULL;
+        AVFilterContext *buffersrc_ctx = NULL;
+        AVFilterContext *buffersink_ctx = NULL;
+        AVFilterInOut *outputs = avfilter_inout_alloc();
+        AVFilterInOut *inputs = avfilter_inout_alloc();
+        AVFilterGraph *filter_graph = avfilter_graph_alloc();
+
+        if (!outputs || !inputs || !filter_graph || !dec_ctx || !enc_ctx) {
+            ret = AVERROR(ENOMEM);
+            goto end;
+        }
+
+        if (dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
+            buffersrc = avfilter_get_by_name("abuffer");
+            buffersink = avfilter_get_by_name("abuffersink");
+            if (!buffersrc || !buffersink) {
+                ALOGE("filtering source or sink element not found\n");
+                ret = AVERROR_UNKNOWN;
+                goto end;
+            }
+
+
+            snprintf(args, sizeof(args),
+                     "time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%" PRIx64,
+                     dec_ctx->time_base.num, dec_ctx->time_base.den, dec_ctx->sample_rate,
+                     av_get_sample_fmt_name(dec_ctx->sample_fmt),
+                     dec_ctx->channel_layout);
+            ret = avfilter_graph_create_filter(&buffersrc_ctx, buffersrc, "in",
+                                               args, NULL, filter_graph);
+            if (ret < 0) {
+                ALOGE("Cannot create audio buffer source\n");
+                goto end;
+            }
+
+            ret = avfilter_graph_create_filter(&buffersink_ctx, buffersink, "out",
+                                               NULL, NULL, filter_graph);
+            if (ret < 0) {
+                ALOGE("Cannot create audio buffer sink\n");
+                goto end;
+            }
+
+            ret = av_opt_set_bin(buffersink_ctx, "sample_fmts",
+                                 (uint8_t*)&enc_ctx->sample_fmt, sizeof(enc_ctx->sample_fmt),
+                                 AV_OPT_SEARCH_CHILDREN);
+            if (ret < 0) {
+                ALOGE("Cannot set output sample format\n");
+                goto end;
+            }
+
+            ret = av_opt_set_bin(buffersink_ctx, "channel_layouts",
+                                 (uint8_t*)&enc_ctx->channel_layout,
+                                 sizeof(enc_ctx->channel_layout), AV_OPT_SEARCH_CHILDREN);
+            if (ret < 0) {
+                ALOGE("Cannot set output channel layout\n");
+                goto end;
+            }
+
+            ret = av_opt_set_bin(buffersink_ctx, "sample_rates",
+                                 (uint8_t*)&enc_ctx->sample_rate, sizeof(enc_ctx->sample_rate),
+                                 AV_OPT_SEARCH_CHILDREN);
+            if (ret < 0) {
+                ALOGE("Cannot set output sample rate\n");
+                goto end;
+            }
+        }
+        else {
+            ret = AVERROR_UNKNOWN;
+            goto end;
+        }
+
+        /* Endpoints for the filter graph. */
+        outputs->name = av_strdup("in");
+        outputs->filter_ctx = buffersrc_ctx;
+        outputs->pad_idx = 0;
+        outputs->next = NULL;
+
+        inputs->name = av_strdup("out");
+        inputs->filter_ctx = buffersink_ctx;
+        inputs->pad_idx = 0;
+        inputs->next = NULL;
+
+        if (!outputs->name || !inputs->name) {
+            ret = AVERROR(ENOMEM);
+            goto end;
+        }
+
+        if ((ret = avfilter_graph_parse_ptr(filter_graph, filter_spec,
+                                            &inputs, &outputs, NULL)) < 0)
+            goto end;
+
+        if ((ret = avfilter_graph_config(filter_graph, NULL)) < 0)
+            goto end;
+
+        m_buffersrc_ctx = buffersrc_ctx;
+        m_buffersink_ctx = buffersink_ctx;
+        m_pcm_filter.reset(filter_graph);
+        end:
+        avfilter_inout_free(&inputs);
+        avfilter_inout_free(&outputs);
+
+        return ret;
     }
 }

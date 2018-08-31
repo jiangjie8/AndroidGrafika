@@ -21,9 +21,9 @@ import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_VP8;
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_VP9;
 
 public class AVMediaRecode {
+
     private static String TAG = "AVMediaRecode";
-
-
+    private ReportInfo mReportInfo = new ReportInfo();
     private MediaCodecVideoDecoder mVideoDecoder = null;
     private MediaCodecVideoEncoder mVideoEncoder = null;
 
@@ -47,6 +47,18 @@ public class AVMediaRecode {
     private RecodeEventListener eventListener = null;
     private RecodeEventListener eventListener_inner = new RecodeEventListener() {
         @Override
+        public void onPrintReport(final String message) {
+            if(eventListener != null){
+                eventListenerHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        eventListener.onPrintReport(message);
+                    }
+                });
+            }
+        }
+
+        @Override
         public void onRecodeFinish() {
             if(eventListener != null){
                 eventListenerHandler.post(new Runnable() {
@@ -61,6 +73,7 @@ public class AVMediaRecode {
 
 
     public interface RecodeEventListener {
+        void onPrintReport(final String message);
         void onRecodeFinish();
     }
 
@@ -95,12 +108,11 @@ public class AVMediaRecode {
         mHandler.post(new Runnable() {
             @Override
             public void run() {
-                if(mSurfaceTextureHelper == null){
+                if(openInputSource() == 0){
                     rootEglBase = EglBase.create();
                     mSurfaceTextureHelper = SurfaceTextureHelper.create("vp_texturehelp", rootEglBase.getEglBaseContext());
+                    initVideoDecoder();
                 }
-                getMediaInfo();
-                initVideoDecoder();
             }
         });
 
@@ -118,12 +130,14 @@ public class AVMediaRecode {
     }
 
 
-    private void getMediaInfo(){
+    private int  openInputSource(){
         mEngineHandleDemuxer = JNIBridge.native_demuxer_createEngine();
         if(JNIBridge.native_demuxer_openInputFormat(mEngineHandleDemuxer, inputSource) < 0){
             Logging.e(TAG, "openInputFormat error");
+            return -1;
         }
         JNIBridge.native_demuxer_getMediaInfo(mEngineHandleDemuxer, mMediaInfo);
+        return 0;
     }
 
     private boolean initVideoDecoder(){
@@ -165,11 +179,10 @@ public class AVMediaRecode {
 
 
     private AVPacket readPacket(){
-        int ret = 0;
         if(mAVPacketBuffer.bufferSize == 0){
             while(true){
                 mAVPacketBuffer.buffer.rewind();
-                ret = JNIBridge.native_demuxer_readPacket(mEngineHandleDemuxer, mAVPacketBuffer);
+                int ret = JNIBridge.native_demuxer_readPacket(mEngineHandleDemuxer, mAVPacketBuffer);
                 if(ret < 0)
                     return null;
                 if(mAVPacketBuffer.bufferSize == 0)
@@ -181,6 +194,12 @@ public class AVMediaRecode {
             mAVPacketBuffer.buffer.position(0);
             mAVPacketBuffer.buffer.limit(mAVPacketBuffer.bufferSize);
         }
+
+        if(mReportInfo.start_time_ms ==  Long.MIN_VALUE)
+            mReportInfo.start_time_ms = System.currentTimeMillis();
+        if(mReportInfo.first_pts_ms ==  Long.MIN_VALUE)
+            mReportInfo.first_pts_ms = TimeUnit.MICROSECONDS.toMillis(mAVPacketBuffer.ptsUs);
+
         return new AVPacket(mAVPacketBuffer.mediaType, mAVPacketBuffer.ptsUs, mAVPacketBuffer.dtsUs, mAVPacketBuffer.buffer,
                 mAVPacketBuffer.bufferSize, mAVPacketBuffer.bufferOffset, mAVPacketBuffer.bufferFlags);
     }
@@ -190,15 +209,47 @@ public class AVMediaRecode {
         return true;
     }
 
+    void writePacket(AVPacket packet){
+        if(mEngineHandleDemuxer != 0){
+            JNIBridge.native_demuxer_writePacket(mEngineHandleDemuxer, packet);
+            mReportInfo.frames += 1;
+            mReportInfo.sum_data_kb +=  packet.bufferSize/1024;
+            print_report(TimeUnit.MICROSECONDS.toMillis(packet.ptsUs));
+        }
+    }
+
+
+    void print_report(long ptsMs){
+        long current = System.currentTimeMillis();
+        if(current - mReportInfo.last_report_time < 500)
+            return;
+
+        double duration_time_s = (current - mReportInfo.start_time_ms)/1000.0;
+        mReportInfo.last_report_time = current;
+        mReportInfo.fps = (int) (mReportInfo.frames / duration_time_s);
+
+        double duration_pts_s = (ptsMs - mReportInfo.first_pts_ms)/1000.0;
+        duration_pts_s = duration_pts_s <= 0 ? 0.04 : duration_pts_s;
+        mReportInfo.bitrate_bit = (int) (mReportInfo.sum_data_kb * 8 / duration_pts_s);
+        eventListener_inner.onPrintReport(mReportInfo.toString());
+        return;
+    }
+
+
     void recodeLoopThread(){
-        int ret = 0;
+        if(mVideoDecoder == null || mEngineHandleDemuxer == 0){
+            release();
+            mHandler.getLooper().quitSafely();
+            return;
+        }
+
         generatorClip(Long.MAX_VALUE);
         while(recodeIsRunning){
             AVPacket packet = readPacket();
             if(packet == null) {
                 break;
             }
-            ret = sendPacket(packet.buffer, packet.bufferSize, packet.ptsUs, packet.mediaType);
+            int ret = sendPacket(packet.buffer, packet.bufferSize, packet.ptsUs, packet.mediaType);
             if(ret == 0){
                 advance();
             }
@@ -224,7 +275,6 @@ public class AVMediaRecode {
             mSurfaceTextureHelper.returnTextureFrame();
 
         }
-
 
         flushEncoder();
         release();
@@ -294,11 +344,6 @@ public class AVMediaRecode {
 
     }
 
-    void writePacket(AVPacket packet){
-        if(mEngineHandleDemuxer != 0)
-            JNIBridge.native_demuxer_writePacket(mEngineHandleDemuxer, packet);
-    }
-
     int sendPacket(ByteBuffer buffer, int size, long pts, int mediaType){
         int ret = -1;
         if(mediaType == AVMediaType.VIDEO){
@@ -314,6 +359,22 @@ public class AVMediaRecode {
         if(mSurfaceTextureHelper != null){mSurfaceTextureHelper.dispose();}
         if(rootEglBase != null){rootEglBase.release();}
         Log.w(TAG, "!!!!!!!!release all source");
+    }
+
+    public class ReportInfo{
+        long start_time_ms = Long.MIN_VALUE;
+        long first_pts_ms = Long.MIN_VALUE;
+        long frames = 0;
+        long sum_data_kb = 0;
+        int fps = 0;
+        int bitrate_bit = 0;
+        long last_report_time = 0;
+
+        @Override
+        public String toString() {
+            String message = ("frames= " + mReportInfo.frames + "  fps= " + mReportInfo.fps + " bitrate " + mReportInfo.bitrate_bit+"kbit/s");
+            return message;
+        }
     }
 
 

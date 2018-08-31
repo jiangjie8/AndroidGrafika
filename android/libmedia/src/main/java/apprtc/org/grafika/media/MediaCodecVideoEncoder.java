@@ -22,8 +22,8 @@ import apprtc.org.grafika.media.AVStruct.CodecBufferInfo;
 public class MediaCodecVideoEncoder implements AVMediaCodec{
     private static final String TAG = "MediaCodecVideoEncoder";
     final String MIMETYPE_VIDEO = MediaFormat.MIMETYPE_VIDEO_AVC;
-    private static final int VIDEO_ControlRateConstant = MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR;
-    private static final int FRAME_INTERVAL = 3;
+    private static final int VIDEO_ControlRateConstant = MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR;
+    private static final int FRAME_INTERVAL = 5;
     public enum VideoCodecType {
         VIDEO_CODEC_VP8,
         VIDEO_CODEC_VP9,

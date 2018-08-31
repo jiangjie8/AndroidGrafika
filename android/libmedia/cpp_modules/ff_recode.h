@@ -13,6 +13,7 @@
 #include "media_common/av_demuxer.h"
 #include "media_common/av_muxer.h"
 #include "media_common/raw_stream_parser.h"
+
 namespace av {
 
 class FFRecoder {
@@ -22,6 +23,11 @@ public:
     StreamInfo m_stream_info = StreamInfo();
 
 private:
+
+    AVFilterContext *m_buffersink_ctx = nullptr;
+    AVFilterContext *m_buffersrc_ctx = nullptr;
+    std::unique_ptr<AVFilterGraph, AVFilterGraphDeleter> m_pcm_filter = nullptr;
+
     std::unique_ptr<AVMuxer> m_muxer = nullptr;
     std::unique_ptr<AudioDecoder> m_audio_decoder = nullptr;
     std::unique_ptr<AudioEncoder> m_audio_encoder = nullptr;
@@ -45,23 +51,20 @@ public:
         m_inputFormat.reset();
         return 0;
     }
-    int probeMediaInfo(JNIEnv *env, jobject object);
+    int getMediaInfo(JNIEnv *env, jobject object);
     int openOutputFormat(JNIEnv *env, const char *outputStr);
     //delete this object after closeOutputFormat
-    int closeOutputFormat(){
-        m_muxer->closeOutputForamt();
-        m_muxer.reset();
-        return 0;
-    }
+    int closeOutputFormat();
 
     int readPacket(JNIEnv *env, jobject packet_obj);
     int writePacket(JNIEnv *env, jobject packet_obj);
 
 private:
+    int init_filter(const AVCodecContext *dec_ctx, const AVCodecContext *enc_ctx, const char *filter_spec);
     int initH264Bsf(const AVCodecParameters *codecpar);
     int recodeWriteAudio(AVPacket *packet);
     int drainAudioEncoder(const AVFrame *frame);
-    int getMediaInfo();
+    int probeMedia();
     const AVCodecParameters *getCodecParameters(enum AVMediaType type);
     int applyBitstream(AVPacket *packet);
     void release(){

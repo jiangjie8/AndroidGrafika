@@ -89,8 +89,8 @@ public class GlRectDrawer implements RendererCommon.GlDrawer {
 
   // Texture coordinates - (0, 0) is bottom-left and (1, 1) is top-right.
   private static final FloatBuffer FULL_RECTANGLE_TEX_BUF = GlUtil.createFloatBuffer(new float[] {
-      0.0f, 0.0f, // Bottom left.
-      1.0f, 0.0f, // Bottom right.
+      0.0f, 0.007353f, // Bottom left.   fix bug  width 1080 but codec_width 1088
+      1.0f, 0.007353f, // Bottom right.
       0.0f, 1.0f, // Top left.
       1.0f, 1.0f // Top right.
   });

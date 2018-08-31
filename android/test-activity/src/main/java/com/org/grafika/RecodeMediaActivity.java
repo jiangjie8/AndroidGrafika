@@ -62,14 +62,19 @@ public class RecodeMediaActivity extends AppCompatActivity {
     int loopNumber = 0;
     void startRecoder(){
         mediaRecode = new AVMediaRecode();
-        mediaRecode.initParm("/sdcard/Download/small.mp4", "/sdcard/Download/jie", "jie-",
-                960, 540, 1500, 5000);
+        mediaRecode.initParm("/sdcard/Download/camera.MOV", "/sdcard/Download/jie", "jie-",
+                960, 540, 2000, 10000/2);
 
         mediaRecode.setRecodeEventListener(new AVMediaRecode.RecodeEventListener() {
             @Override
+            public void onPrintReport(final String message) {
+                Log.i(TAG, message);
+            }
+
+            @Override
             public void onRecodeFinish() {
                 if(mWork){
-                    startRecoder();
+//                    startRecoder();
                 }
             }
         }, new Handler(getMainLooper()));

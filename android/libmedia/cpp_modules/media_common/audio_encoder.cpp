@@ -1,5 +1,6 @@
 #include "audio_encoder.h"
 namespace av{
+    constexpr int AUDIO_BITRATE = 48 * 1024;
 
     int AudioEncoder::openCoder(const AVCodecParameters *parm){
         int ret;
@@ -13,6 +14,7 @@ namespace av{
         AVCodecContext *codec_ctx = m_codec_ctx.get();
 
 //        avcodec_parameters_to_context(m_codec_ctx.get(), parm);
+        codec_ctx->bit_rate = AUDIO_BITRATE;
         codec_ctx->sample_rate = parm->sample_rate;
         codec_ctx->channels = parm->channels;
         codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
@@ -20,11 +22,13 @@ namespace av{
         codec_ctx->time_base = {1, codec_ctx->sample_rate};
         ret = avcodec_open2(m_codec_ctx.get(), encoder, nullptr);
         if(ret < 0){
-            ALOGE("Failed to open decoder  %d", parm->codec_id);
+            ALOGE("Failed to open encoder  %d", parm->codec_id);
             m_codec_ctx.reset();
             return -1;
         }
 
+        if (!m_codec_ctx->channel_layout)
+            m_codec_ctx->channel_layout = av_get_default_channel_layout(m_codec_ctx->channels);
         return 0;
     }
 
@@ -38,21 +42,6 @@ namespace av{
         int ret = 0;
         ret = avcodec_receive_packet(m_codec_ctx.get(), avpkt);
         return ret;
-    }
-
-
-    int AudioEncoder::encode_audio(AVPacket *packet, const AVFrame *frame){
-        int ret = 0;
-        int gotpacket = 0;
-        ret = avcodec_encode_audio2(m_codec_ctx.get(), packet, frame, &gotpacket);
-        if(ret < 0){
-            ALOGE("avcodec_encode_audio2 error");
-            return ret;
-        }
-        else if(gotpacket)
-            return 0;
-        else
-            return AVERROR(EAGAIN);
     }
 
     int AudioEncoder::flushCodec(AVPacket *avpkt){
@@ -75,7 +64,20 @@ namespace av{
 
         ret = avcodec_receive_packet(m_codec_ctx.get(), avpkt);
         return ret;
-
     }
+
+//    int AudioEncoder::encode_audio(AVPacket *packet, const AVFrame *frame){
+//        int ret = 0;
+//        int gotpacket = 0;
+//        ret = avcodec_encode_audio2(m_codec_ctx.get(), packet, frame, &gotpacket);
+//        if(ret < 0){
+//            ALOGE("avcodec_encode_audio2 error");
+//            return ret;
+//        }
+//        else if(gotpacket)
+//            return 0;
+//        else
+//            return AVERROR(EAGAIN);
+//    }
 
 }

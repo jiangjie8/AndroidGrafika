@@ -10,6 +10,9 @@ __EXTERN_C_BEGIN
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
+#include "libavfilter/buffersink.h"
+#include "libavfilter/buffersrc.h"
+#include "libavutil/opt.h"
 __EXTERN_C_END
 #include <string>
 #include <inttypes.h>
@@ -84,6 +87,22 @@ namespace av{
         void operator()(AVBSFContext* ptr) const {
             if(ptr){
                 av_bsf_free(&ptr);
+            }
+        }
+    };
+
+    struct AVFilterGraphDeleter{
+        void operator()(AVFilterGraph* ptr) const {
+            if(ptr){
+                avfilter_graph_free(&ptr);
+            }
+        }
+    };
+
+    struct AVFilterInOutDeleter{
+        void operator()(AVFilterInOut* ptr) const {
+            if(ptr){
+                avfilter_inout_free(&ptr);
             }
         }
     };
