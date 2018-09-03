@@ -48,6 +48,7 @@ struct JavaMediaInfo {
 
     jfieldID  filed_bitrate;
     jfieldID  filed_duration;
+    jfieldID  filed_startTime;
 
     jfieldID  filed_videoCodecID;
     jfieldID  filed_width;
@@ -64,6 +65,7 @@ jobject J4A_MediaInfo_construct_asGlobalRef_catchAll(JNIEnv *env);
 int J4A_MediaInfo_Class_Init(JNIEnv *env);
 int J4A_MediaInfo_setFiled_bitrate(JNIEnv *env, jobject object, int bitrate);
 int J4A_MediaInfo_setFiled_duration(JNIEnv *env, jobject object, long duration);
+int J4A_MediaInfo_setFiled_startTime(JNIEnv *env, jobject object, long startTime);
 int J4A_MediaInfo_setFiled_videoCodecID(JNIEnv *env, jobject object, int name);
 int J4A_MediaInfo_setFiled_width(JNIEnv *env, jobject object, int width);
 int J4A_MediaInfo_setFiled_height(JNIEnv *env, jobject object, int height);

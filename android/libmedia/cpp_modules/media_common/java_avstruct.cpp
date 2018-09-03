@@ -192,6 +192,13 @@ int J4A_MediaInfo_Class_Init(JNIEnv *env){
         goto fail;
 
     class_id = java_class_MediaInfo.classId;
+    name = "startTime";
+    sign = "J";
+    java_class_MediaInfo.filed_startTime = J4A_GetFieldID__catchAll(env, class_id, name, sign);
+    if(java_class_MediaInfo.filed_startTime == nullptr)
+        goto fail;
+
+    class_id = java_class_MediaInfo.classId;
     name = "videoCodecID";
     sign = "I";
     java_class_MediaInfo.filed_videoCodecID = J4A_GetFieldID__catchAll(env, class_id, name, sign);
@@ -289,6 +296,10 @@ int J4A_MediaInfo_setFiled_bitrate(JNIEnv *env, jobject object, int bitrate){
 }
 int J4A_MediaInfo_setFiled_duration(JNIEnv *env, jobject object, long duration){
     env->SetLongField(object, java_class_MediaInfo.filed_duration, duration);
+    return 0;
+}
+int J4A_MediaInfo_setFiled_startTime(JNIEnv *env, jobject object, long startTime){
+    env->SetLongField(object, java_class_MediaInfo.filed_startTime, startTime);
     return 0;
 }
 int J4A_MediaInfo_setFiled_videoCodecID(JNIEnv *env, jobject object, int id){

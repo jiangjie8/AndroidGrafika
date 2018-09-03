@@ -1,13 +1,7 @@
 package com.org.grafika;
 
-import android.media.MediaCodec;
-import android.media.MediaExtractor;
-import android.media.MediaFormat;
-import android.media.MediaMuxer;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -15,37 +9,16 @@ import android.util.Log;
 import android.view.SurfaceView;
 import android.view.View;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Queue;
-
-import apprtc.org.grafika.gles.EglBase;
-import apprtc.org.grafika.gles.EglBase14;
+import apprtc.org.grafika.AVRecodeInterface;
 
 import apprtc.org.grafika.media.AVMediaRecode;
-import apprtc.org.grafika.media.MediaCodecAudioDecoder;
-import apprtc.org.grafika.media.MediaCodecAudioEncoder;
-import apprtc.org.grafika.media.MediaCodecVideoDecoder;
-import apprtc.org.grafika.media.MediaCodecVideoDecoder.DecodedTextureBuffer;
-import apprtc.org.grafika.media.MediaCodecVideoEncoder;
-import apprtc.org.grafika.media.SurfaceTextureHelper;
-
-
-import static apprtc.org.grafika.media.AVMediaCodec.ERROR_TRY_AGAIN;
-import static apprtc.org.grafika.media.AVMediaCodec.KEY_BIT_WIDTH;
 
 
 public class RecodeMediaActivity extends AppCompatActivity {
     private static String TAG = "RecodeMediaActivity";
 
     private SurfaceView mSurfaceView;
-    AVMediaRecode mediaRecode;
+    AVRecodeInterface mediaRecode;
 
 
 
@@ -55,36 +28,40 @@ public class RecodeMediaActivity extends AppCompatActivity {
         setContentView(R.layout.activity_recode_media);
         mSurfaceView = findViewById(R.id.surfaceView);
 
-
-
     }
 
     int loopNumber = 0;
     void startRecoder(){
-        mediaRecode = new AVMediaRecode();
-        mediaRecode.initParm("/sdcard/Download/camera.MOV", "/sdcard/Download/jie", "jie-",
-                960, 540, 2000, 10000/2);
+        mediaRecode = AVRecodeInterface.getRecodeInstance();
+        mediaRecode.openInputSource("/sdcard/Download/world.mp4");
+        mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "jie-",
+                960, 540, 1500, 10000);
 
-        mediaRecode.setRecodeEventListener(new AVMediaRecode.RecodeEventListener() {
+        mediaRecode.setRecodeEventListener(new AVRecodeInterface.onRecodeEventListener() {
             @Override
             public void onPrintReport(final String message) {
                 Log.i(TAG, message);
             }
 
             @Override
+            public void onErrorMessage(int errorCode, String errorMessage) {
+                Log.e(TAG, "error information: " + errorMessage);
+            }
+
+            @Override
             public void onRecodeFinish() {
                 if(mWork){
-//                    startRecoder();
+                    startRecoder();
                 }
             }
         }, new Handler(getMainLooper()));
 
-        mediaRecode.startRecoder();
+        mediaRecode.starRecode();
         Log.e(TAG, "=== startRecoder  loopNumber " + loopNumber++);
     }
 
     void stopRecoder(){
-        mediaRecode.stopRecoder();
+        mediaRecode.stopRecode();
     }
 
     private boolean mWork = false;

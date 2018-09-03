@@ -110,6 +110,7 @@ namespace av{
 
         J4A_MediaInfo_setFiled_bitrate(env, object, m_stream_info.bitrate);
         J4A_MediaInfo_setFiled_duration(env, object, m_stream_info.duration);
+        J4A_MediaInfo_setFiled_startTime(env, object, m_stream_info.start_time);
         if(m_video_codecParam.width > 0 &&
            m_video_codecParam.height > 0){
             J4A_MediaInfo_setFiled_videoCodecID(env, object, m_video_codecParam.codec_id);
@@ -205,10 +206,16 @@ namespace av{
             return 0;
         }
 
-        if (J4A_set_avpacket(env, packet_obj, nullptr, 0, 0, 0, mediaType) < 0) {
+
+        int64_t pts = 0;
+        if (packet->pts != AV_NOPTS_VALUE)
+            pts = av_rescale_q(packet->pts, stream_timebae, AV_TIME_BASE_Q);
+        if (J4A_set_avpacket(env, packet_obj, nullptr, 0, pts, pts, mediaType) < 0) {
             ALOGE("GetDirectBufferAddress error");
             return -1;
         }
+
+
         if(mediaType == AVMEDIA_TYPE_AUDIO && m_get_spspps){
             ret = recodeWriteAudio(packet.get());
         }
@@ -233,6 +240,7 @@ namespace av{
         vpacket->stream_index = v_index;
         vpacket->pts = pts;
         vpacket->dts = dts;
+        vpacket->duration = av_rescale_q(1 , {1, m_video_codecParam.frame_rate}, AV_TIME_BASE_Q);
         vpacket->flags = buffer_flags;
         memcpy(vpacket->data, buf_ptr, buffer_size);
 

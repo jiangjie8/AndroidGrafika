@@ -29,6 +29,7 @@ public class AVStruct {
     public final static class MediaInfo{
         public int bitrate = 0;
         public long duration = 0;
+        public long startTime = 0;
 
         public int videoCodecID;
         public int width = 0;
