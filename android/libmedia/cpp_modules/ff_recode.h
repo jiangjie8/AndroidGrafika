@@ -52,7 +52,7 @@ public:
         return 0;
     }
     int getMediaInfo(JNIEnv *env, jobject object);
-    int openOutputFormat(JNIEnv *env, const char *outputStr);
+    int openOutputFormat(JNIEnv *env, const char *outputStr, int codecID);
     //delete this object after closeOutputFormat
     int closeOutputFormat();
 

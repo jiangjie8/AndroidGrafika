@@ -15,8 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import apprtc.org.grafika.Utils.PermissionHelper;
-
 
 public class MainActivity extends ListActivity {
     public static final String TAG = "Grafika";

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package apprtc.org.grafika.Utils;
+package com.org.grafika;
 
 import android.hardware.Camera;
 import android.util.Log;

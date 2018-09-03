@@ -54,7 +54,7 @@ namespace av {
         }
         ret = avformat_write_header(ofmt_ctx, NULL);
         if (ret < 0) {
-            ALOGE("Error occurred when opening output file");
+            ALOGE("Error occurred when avformat_write_header");
             return ret;
         }
         return ret;

@@ -19,9 +19,10 @@ import apprtc.org.grafika.gles.EglBase14;
 import apprtc.org.grafika.gles.GlRectDrawer;
 import apprtc.org.grafika.media.AVStruct.CodecBufferInfo;
 
+
 public class MediaCodecVideoEncoder implements AVMediaCodec{
     private static final String TAG = "MediaCodecVideoEncoder";
-    final String MIMETYPE_VIDEO = MediaFormat.MIMETYPE_VIDEO_AVC;
+//    final String MIMETYPE_VIDEO = MediaFormat.MIMETYPE_VIDEO_HEVC;
     private static final int VIDEO_ControlRateConstant = MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR;
     private static final int FRAME_INTERVAL = 5;
     public enum VideoCodecType {
@@ -78,7 +79,7 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
     }
 
 
-    public boolean initEncode(int width, int height, int kbps, int fps, EglBase14.Context sharedContext){
+    public boolean initEncode(String  mime, int width, int height, int kbps, int fps, EglBase14.Context sharedContext){
         this.width =width;
         this.height = height;
         if(mediaCodecThread != null){
@@ -92,7 +93,7 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
         mediaCodecThread = Thread.currentThread();
 
         try{
-            MediaFormat format = MediaFormat.createVideoFormat(MIMETYPE_VIDEO, width, height);
+            MediaFormat format = MediaFormat.createVideoFormat(mime, width, height);
             format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
             format.setInteger(MediaFormat.KEY_BIT_RATE, targetBitrateBps);
             format.setInteger(MediaFormat.KEY_FRAME_RATE, targetFps);
@@ -102,7 +103,7 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
             format.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline);
             format.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel3);
 
-            mediaCodec = createEncoderByType(MIMETYPE_VIDEO);
+            mediaCodec = createEncoderByType(mime);
             if (mediaCodec == null) {
                 Logging.e(TAG, "Can not create media encoder");
                 release();
@@ -372,6 +373,12 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
 
     public MediaFormat getMediaFormat(){
         return mediaFormat;
+    }
+    public ByteBuffer getConfigureData(){
+        if(configData == null)
+            return null;
+        configData.rewind();
+        return configData;
     }
 
     boolean releaseOutputBuffer(int index) {

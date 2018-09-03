@@ -18,7 +18,6 @@ import android.view.WindowManager;
 
 import java.io.IOException;
 
-import apprtc.org.grafika.Utils.CameraUtils;
 import apprtc.org.grafika.gles.EglBase;
 import apprtc.org.grafika.gles.EglBase14;
 import apprtc.org.grafika.gles.GlRectDrawer;

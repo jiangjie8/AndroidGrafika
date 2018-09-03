@@ -24,7 +24,6 @@ import android.view.View;
 import android.widget.Toast;
 
 import apprtc.org.grafika.JNIBridge;
-import apprtc.org.grafika.Utils.PermissionHelper;
 import apprtc.org.grafika.gles.EglBase;
 import apprtc.org.grafika.gles.EglBase14;
 import apprtc.org.grafika.gles.GlRectDrawer;

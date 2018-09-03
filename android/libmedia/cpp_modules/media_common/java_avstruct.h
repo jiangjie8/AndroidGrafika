@@ -8,6 +8,13 @@
 #include "jni_bridge.h"
 
 
+/**
+ * This indicated that the buffer marked as such contains codec
+ * initialization / codec specific data instead of media data.
+ */
+constexpr static int BUFFER_FLAG_EXTERNAL_DATA = 2;
+
+
 struct JavaAVPacket {
     jclass classId;
     jmethodID constructor_AVPacket;

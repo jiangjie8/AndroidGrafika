@@ -7,6 +7,9 @@ import android.os.Message;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
@@ -17,13 +20,19 @@ import apprtc.org.grafika.gles.EglBase;
 import apprtc.org.grafika.gles.EglBase14;
 import apprtc.org.grafika.media.AVStruct.*;
 
+import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_AVC;
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_H264;
+import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_HEVC;
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_VP8;
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_VP9;
+import static apprtc.org.grafika.media.AVMediaCodec.BUFFER_FLAG_EXTERNAL_DATA;
+import static apprtc.org.grafika.media.AVStruct.AVMediaType.VIDEO;
 
 public class AVMediaRecode implements AVRecodeInterface {
 
     private static String TAG = "AVMediaRecode";
+    private final int EncoderID = AV_CODEC_ID_AVC;
+
     private ReportInfo mReportInfo = new ReportInfo();
     private MediaCodecVideoDecoder mVideoDecoder = null;
     private MediaCodecVideoEncoder mVideoEncoder = null;
@@ -34,9 +43,15 @@ public class AVMediaRecode implements AVRecodeInterface {
 
     private MediaInfo mMediaInfo = new MediaInfo();
     private AVPacket mAVPacketBuffer = new AVPacket((int) (1920 * 1080 * 1.5));
+
+    private ByteBuffer mExternalBuffer = null;
+
     private long mEngineHandleDemuxer = 0;
+
     private boolean recodeIsRunning = false;
     private int mErrorCode = 0;
+
+
     private String inputSource;
     private String clipDirectory;
     private String clipPrefix;
@@ -98,6 +113,9 @@ public class AVMediaRecode implements AVRecodeInterface {
         if(mMediaInfo.videoCodecID == AV_CODEC_ID_H264){
             format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, mMediaInfo.width, mMediaInfo.height);
         }
+        else if(mMediaInfo.videoCodecID == AV_CODEC_ID_HEVC){
+            format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_HEVC, mMediaInfo.width, mMediaInfo.height);
+        }
         else if(mMediaInfo.videoCodecID == AV_CODEC_ID_VP8){
             format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_VP8, mMediaInfo.width, mMediaInfo.height);
         }
@@ -112,13 +130,17 @@ public class AVMediaRecode implements AVRecodeInterface {
         return mVideoDecoder.initDecode(format, mSurfaceTextureHelper);
     }
 
-    private boolean  initVideoEncoder(int width, int height, int bitrate, int fps, EglBase.Context sharedContext){
+    private boolean initVideoEncoder(int codecID, int width, int height, int bitrate, int fps, EglBase.Context sharedContext){
         if(mVideoEncoder != null)
             throw new RuntimeException("forget  release encoder?");
 
         if(sharedContext instanceof EglBase14.Context){
+            String  mime = MediaFormat.MIMETYPE_VIDEO_AVC;
             mVideoEncoder = new MediaCodecVideoEncoder();
-            return mVideoEncoder.initEncode(width, height, bitrate, fps, (EglBase14.Context) sharedContext);
+            if(codecID == AV_CODEC_ID_HEVC){
+                mime = MediaFormat.MIMETYPE_VIDEO_HEVC;
+            }
+            return mVideoEncoder.initEncode(mime, width, height, bitrate, fps, (EglBase14.Context) sharedContext);
         }
         else{
             Log.e(TAG, "unsupport EglBase14");
@@ -136,7 +158,7 @@ public class AVMediaRecode implements AVRecodeInterface {
                     return null;
                 if(mAVPacketBuffer.bufferSize == 0)
                     continue;
-                if(mAVPacketBuffer.mediaType == AVMediaType.VIDEO){
+                if(mAVPacketBuffer.mediaType == VIDEO){
                     break;
                 }
             }
@@ -162,12 +184,30 @@ public class AVMediaRecode implements AVRecodeInterface {
     boolean writePacket(AVPacket packet){
         int ret = -1;
         if(mEngineHandleDemuxer != 0){
+            getExternalData();
+            if(mExternalBuffer == null){
+                Logging.e(TAG, " no external data before write packet");
+            }
             ret = JNIBridge.native_demuxer_writePacket(mEngineHandleDemuxer, packet);
             mReportInfo.frames += 1;
             mReportInfo.sum_data_kb +=  packet.bufferSize/1024;
             print_report(TimeUnit.MICROSECONDS.toMillis(packet.ptsUs));
         }
         return ret == 0;
+    }
+
+    void getExternalData(){
+        if(mExternalBuffer == null){
+            ByteBuffer buffer = mVideoEncoder.getConfigureData();
+            if(buffer != null){
+                mExternalBuffer = ByteBuffer.allocateDirect(buffer.limit());
+                mExternalBuffer.put(buffer);
+                mExternalBuffer.rewind();
+                buffer.rewind();
+                JNIBridge.native_demuxer_writePacket(mEngineHandleDemuxer, new AVPacket(VIDEO, Long.MAX_VALUE, Long.MAX_VALUE,
+                        mExternalBuffer, mExternalBuffer.limit(), 0, BUFFER_FLAG_EXTERNAL_DATA));
+            }
+        }
     }
 
 
@@ -191,6 +231,7 @@ public class AVMediaRecode implements AVRecodeInterface {
     void recodeLoopThread(){
         if(mVideoDecoder == null || mEngineHandleDemuxer == 0){
             release();
+            eventListener_inner.onRecodeFinish();
             mHandler.getLooper().quitSafely();
             return;
         }
@@ -249,9 +290,9 @@ public class AVMediaRecode implements AVRecodeInterface {
         if(ptsMs >= end){
             String output = clipDirectory + clipPrefix + new Integer(clipIndex).toString() + ".mp4";
             Logging.w(TAG, "new output " + output);
-            JNIBridge.native_demuxer_openOutputFormat(mEngineHandleDemuxer, output);
+            JNIBridge.native_demuxer_openOutputFormat(mEngineHandleDemuxer, output, EncoderID);
             if(mVideoDecoder != null){
-                if(!initVideoEncoder(clipWidth, clipHeight, clipBitrate,
+                if(!initVideoEncoder(EncoderID, clipWidth, clipHeight, clipBitrate,
                         mMediaInfo.framerate, rootEglBase.getEglBaseContext())){
                     if(mVideoEncoder != null){mVideoEncoder.release(); mVideoEncoder = null;}
                     eventListener_inner.onErrorMessage(-1, "open video encode error");
@@ -269,7 +310,7 @@ public class AVMediaRecode implements AVRecodeInterface {
             AVPacket pkt = null;
             CodecBufferInfo bufferinfo = mVideoEncoder.receivePacket();
             if(bufferinfo != null) {
-                pkt =  new AVPacket(AVMediaType.VIDEO, bufferinfo.ptsUs, bufferinfo.ptsUs, bufferinfo.buffer,
+                pkt =  new AVPacket(VIDEO, bufferinfo.ptsUs, bufferinfo.ptsUs, bufferinfo.buffer,
                         bufferinfo.size, bufferinfo.offset, bufferinfo.flags);
             }
             if (pkt == null)
@@ -287,7 +328,7 @@ public class AVMediaRecode implements AVRecodeInterface {
             AVPacket  packet = null;
             CodecBufferInfo bufferinfo = mVideoEncoder.flushEncoder();
             if(bufferinfo != null) {
-                packet = new AVPacket(AVMediaType.VIDEO, bufferinfo.ptsUs, bufferinfo.ptsUs, bufferinfo.buffer,
+                packet = new AVPacket(VIDEO, bufferinfo.ptsUs, bufferinfo.ptsUs, bufferinfo.buffer,
                         bufferinfo.size, bufferinfo.offset, bufferinfo.flags);
             }
             if(packet == null){
@@ -303,7 +344,7 @@ public class AVMediaRecode implements AVRecodeInterface {
 
     int sendPacket(ByteBuffer buffer, int size, long pts, int mediaType){
         int ret = -1;
-        if(mediaType == AVMediaType.VIDEO){
+        if(mediaType == VIDEO){
             ret = mVideoDecoder.sendPacket(buffer, size, pts);
         }
         return ret;
@@ -341,6 +382,10 @@ public class AVMediaRecode implements AVRecodeInterface {
                     if(mVideoDecoder != null){mVideoDecoder.release(); mVideoDecoder = null;}
                     eventListener_inner.onErrorMessage(-1, "open video decoder error");
                 }
+                Logging.w(TAG, "duration " + mMediaInfo.duration + ",startTime " + mMediaInfo.startTime + ",videoCodecID " + mMediaInfo.videoCodecID +
+                                        ",width " + mMediaInfo.width + ",height " + mMediaInfo.height + ",framerate " + mMediaInfo.framerate);
+                Logging.w(TAG, "audioCodecID " + mMediaInfo.audioCodecID + ",channels " + mMediaInfo.channels + ",sampleRate " + mMediaInfo.sampleRate +
+                        ",sampleDepth " + mMediaInfo.sampleDepth + ",frameSize " + mMediaInfo.frameSize);
             }
         });
 
@@ -421,5 +466,39 @@ public class AVMediaRecode implements AVRecodeInterface {
         }
     };
 
+
+//    static public DumpH264 fileDump = new DumpH264("/sdcard/Download/jie/jie.h264");
+//    static class DumpH264{
+//        private File file;
+//        private FileOutputStream fos;
+//
+//        public DumpH264(String name){
+//            file  = new File(name);
+//            if(file.exists()){
+//                file.delete();
+//            }
+//
+//            try {
+//                fos = new FileOutputStream(file);
+//            } catch (FileNotFoundException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//
+//        public void Write(ByteBuffer bb, int size){
+//
+//            try {
+//                ByteBuffer aa = ByteBuffer.allocate(bb.limit());
+//                aa.put(bb);
+//                aa.rewind();
+//                bb.rewind();
+//                fos.write(aa.array(),0, size);
+//                fos.flush();
+//                //Log.w(TAG, "arrayOffset " + aa.arrayOffset()+ " position " + aa.position()+ " limit " + aa.limit());
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//    }
 
 }

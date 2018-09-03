@@ -1,4 +1,4 @@
-package apprtc.org.grafika.Utils;
+package com.org.grafika;
 
 import android.Manifest;
 import android.app.Activity;

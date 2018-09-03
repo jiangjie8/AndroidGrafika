@@ -30,7 +30,8 @@ public:
     int writePacket(AVPacket *packet);
 
     void closeOutputForamt(){
-        av_write_trailer(m_outputFormat.get());
+        if(m_outputFormat)
+            av_write_trailer(m_outputFormat.get());
         m_outputFormat.reset();
     }
 

@@ -22,9 +22,20 @@ namespace av{
             return -1;
         }
 
-        const AVBitStreamFilter * bsf = av_bsf_get_by_name("h264_mp4toannexb");
+        char *bitstream_filter = NULL;
+        if(codecpar->codec_id == AV_CODEC_ID_H264){
+            bitstream_filter = "h264_mp4toannexb";
+        }
+        else if(codecpar->codec_id == AV_CODEC_ID_H265){
+            bitstream_filter = "hevc_mp4toannexb";
+        }
+        else{
+            return -1;
+        }
+
+        const AVBitStreamFilter * bsf = av_bsf_get_by_name(bitstream_filter);
         if(bsf ==  nullptr){
-            ALOGE(" find  h264_mp4toannexb  filter error");
+            ALOGE(" find  %s  filter error", bitstream_filter);
             return -1;
         }
         AVBSFContext *bsf_ctx = nullptr;
@@ -131,7 +142,7 @@ namespace av{
     }
 
 
-    int FFRecoder::openOutputFormat(JNIEnv *env, const char *outputStr){
+    int FFRecoder::openOutputFormat(JNIEnv *env, const char *outputStr, int videoCodecID){
         int ret = 0;
         m_muxer.reset(new AVMuxer());
         m_muxer->openOutputFormat(outputStr);
@@ -144,7 +155,7 @@ namespace av{
             codecpar->width = src_codecpar->width;
             codecpar->height = src_codecpar->height;
             codecpar->sample_aspect_ratio = src_codecpar->sample_aspect_ratio;
-            codecpar->codec_id = AV_CODEC_ID_H264;
+            codecpar->codec_id = (enum AVCodecID)videoCodecID;
             codecpar->format = AV_PIX_FMT_YUV420P;
             v_index = m_muxer->addStream(codecpar);
             avcodec_parameters_free(&codecpar);
@@ -244,11 +255,16 @@ namespace av{
         vpacket->flags = buffer_flags;
         memcpy(vpacket->data, buf_ptr, buffer_size);
 
-        if(!m_get_spspps){
+        if(!m_get_spspps &&  (buffer_flags & BUFFER_FLAG_EXTERNAL_DATA) != 0){
             m_get_spspps = true;
-            m_spspps_buffer = get_sps_pps(vpacket->data, buffer_size, m_spspps_buffer_size);
+            m_spspps_buffer_size = buffer_size;
+            m_spspps_buffer = (uint8_t *)av_malloc(m_spspps_buffer_size);
+            memcpy(m_spspps_buffer, vpacket->data, m_spspps_buffer_size);
             m_muxer->setExternalData(m_spspps_buffer, m_spspps_buffer_size, v_index);
+            J4A_DeleteLocalRef__p(env, &bytebuffer);
+            return 0;
         }
+
         ret = m_muxer->writePacket(vpacket.get());
 
         J4A_DeleteLocalRef__p(env, &bytebuffer);
@@ -304,10 +320,6 @@ namespace av{
                 if (ret < 0)
                     break;
             }
-
-
-
-
         }
         return ret;
     }
