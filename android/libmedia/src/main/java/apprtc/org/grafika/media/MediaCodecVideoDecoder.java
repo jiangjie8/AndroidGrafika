@@ -163,7 +163,8 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
 
     public void release() {
         Logging.d(TAG, "Java releaseDecoder. Total number of dropped frames: " + droppedFrames);
-        checkOnMediaCodecThread();
+        if(mediaCodecThread != null)
+            checkOnMediaCodecThread();
 
         // Run Mediacodec stop() and release() on separate thread since sometime
         // Mediacodec.stop() may hang.
@@ -395,6 +396,12 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
                 throw new RuntimeException("Unexpected dequeueOutputBuffer error");
             }
             else {
+                if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
+                    decodeFrameEnd = true;
+                    mediaCodec.releaseOutputBuffer(result, false /* render */);
+                    Logging.w(TAG, "decode end, no output frame Available");
+                    return null;
+                }
                 return new CodecBufferInfo(result, codecBufferInfo.size, codecBufferInfo.offset, codecBufferInfo.flags, codecBufferInfo.presentationTimeUs, false);
             }
         }

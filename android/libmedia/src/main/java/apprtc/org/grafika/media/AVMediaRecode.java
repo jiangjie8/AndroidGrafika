@@ -31,7 +31,7 @@ import static apprtc.org.grafika.media.AVStruct.AVMediaType.VIDEO;
 public class AVMediaRecode implements AVRecodeInterface {
 
     private static String TAG = "AVMediaRecode";
-    private final int EncoderID = AV_CODEC_ID_AVC;
+    private final int EncoderID = AV_CODEC_ID_HEVC;
 
     private ReportInfo mReportInfo = new ReportInfo();
     private MediaCodecVideoDecoder mVideoDecoder = null;
@@ -110,7 +110,7 @@ public class AVMediaRecode implements AVRecodeInterface {
             return false;
         }
 
-        if(mMediaInfo.videoCodecID == AV_CODEC_ID_H264){
+        if(mMediaInfo.videoCodecID == AV_CODEC_ID_AVC){
             format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, mMediaInfo.width, mMediaInfo.height);
         }
         else if(mMediaInfo.videoCodecID == AV_CODEC_ID_HEVC){

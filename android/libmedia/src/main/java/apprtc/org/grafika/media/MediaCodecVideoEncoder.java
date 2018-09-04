@@ -160,7 +160,8 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
 
     public void release() {
         Logging.d(TAG, "Java releaseEncoder");
-        checkOnMediaCodecThread();
+        if(mediaCodecThread != null)
+            checkOnMediaCodecThread();
 
         class CaughtException {
             Exception e;
