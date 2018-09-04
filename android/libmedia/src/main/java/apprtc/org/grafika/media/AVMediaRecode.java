@@ -21,7 +21,6 @@ import apprtc.org.grafika.gles.EglBase14;
 import apprtc.org.grafika.media.AVStruct.*;
 
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_AVC;
-import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_H264;
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_HEVC;
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_VP8;
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_VP9;
@@ -31,7 +30,7 @@ import static apprtc.org.grafika.media.AVStruct.AVMediaType.VIDEO;
 public class AVMediaRecode implements AVRecodeInterface {
 
     private static String TAG = "AVMediaRecode";
-    private final int EncoderID = AV_CODEC_ID_HEVC;
+    private final int EncoderID = AV_CODEC_ID_AVC;
 
     private ReportInfo mReportInfo = new ReportInfo();
     private MediaCodecVideoDecoder mVideoDecoder = null;
