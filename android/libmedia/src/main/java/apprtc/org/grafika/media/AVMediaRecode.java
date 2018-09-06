@@ -287,7 +287,7 @@ public class AVMediaRecode implements AVRecodeInterface {
         }
 
         if(ptsMs >= end){
-            String output = clipDirectory + clipPrefix + new Integer(clipIndex).toString() + ".mp4";
+            String output = String.format(clipDirectory + clipPrefix, clipIndex);
             Logging.w(TAG, "new output " + output);
             JNIBridge.native_demuxer_openOutputFormat(mEngineHandleDemuxer, output, EncoderID);
             if(mVideoDecoder != null){

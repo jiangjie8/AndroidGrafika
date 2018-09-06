@@ -34,8 +34,8 @@ public class RecodeMediaActivity extends AppCompatActivity {
     void startRecoder(){
         mediaRecode = AVRecodeInterface.getRecodeInstance();
         mediaRecode.openInputSource("/sdcard/Download/world.mp4");
-        mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "jie-",
-                960, 544, 1300, 100000);
+        mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "jie-%03d.mp4",
+                960, 544, 1500, 10000);
 
         mediaRecode.setRecodeEventListener(new AVRecodeInterface.onRecodeEventListener() {
             @Override
