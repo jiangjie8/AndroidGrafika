@@ -89,11 +89,32 @@ public class GlRectDrawer implements RendererCommon.GlDrawer {
 
   // Texture coordinates - (0, 0) is bottom-left and (1, 1) is top-right.
   private static final FloatBuffer FULL_RECTANGLE_TEX_BUF = GlUtil.createFloatBuffer(new float[] {
-      0.0f, 0.007353f, // Bottom left.   fix bug  width 1080 but codec_width 1088
+      0.0f, 0.007353f, // Bottom left.
       1.0f, 0.007353f, // Bottom right.
       0.0f, 1.0f, // Top left.
       1.0f, 1.0f // Top right.
   });
+  // Texture coordinates - (0, 0) is bottom-left and (1, 1) is top-right.
+  private static FloatBuffer FULL_RECTANGLE_TEX_BUF_Encoder = GlUtil.createFloatBuffer(new float[] {
+        0.0f, 0.0f, // Bottom left.   fix bug  width 1080 but codec_width 1088
+        1.0f, 0.0f, // Bottom right.
+        0.0f, 1.0f, // Top left.
+        1.0f, 1.0f // Top right.
+  });
+
+  public static void set_Encoder_FULL_RECTANGLE(int width, int height){
+    int align = 16;
+    int align_width = (width + align - 1) & (-align);
+    int align_height = (height + align - 1) & (-align);
+    float offset_width = (align_width - width)/(float)align_width;
+    float offset_height = (align_height - height)/(float)align_height;
+    FULL_RECTANGLE_TEX_BUF_Encoder = GlUtil.createFloatBuffer(new float[] {
+            0.0f, offset_height, // Bottom left.   fix bug  width 1080 but codec_width 1088
+            1.0f - offset_width, offset_height, // Bottom right.
+            0.0f, 1.0f, // Top left.
+            1.0f - offset_width, 1.0f // Top right.
+    });
+  }
 
   private static class Shader {
     public final GlShader glShader;

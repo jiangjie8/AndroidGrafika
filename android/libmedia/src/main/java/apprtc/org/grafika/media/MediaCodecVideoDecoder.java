@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 import apprtc.org.grafika.Logging;
 import apprtc.org.grafika.Utils.ThreadUtils;
+import apprtc.org.grafika.gles.GlRectDrawer;
 import apprtc.org.grafika.media.AVStruct.CodecBufferInfo;
 
 
@@ -111,6 +112,7 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
         try {
             this.width = format.getInteger(MediaFormat.KEY_WIDTH);
             this.height = format.getInteger(MediaFormat.KEY_HEIGHT);
+            GlRectDrawer.set_Encoder_FULL_RECTANGLE(this.width, this.height);
 
 //            MediaFormat myFormat = MediaFormat.createVideoFormat(format.getString(MediaFormat.KEY_MIME), format.getInteger(MediaFormat.KEY_WIDTH), format.getInteger(MediaFormat.KEY_HEIGHT));
 //            myFormat.setByteBuffer("csd-0", format.getByteBuffer("csd-0"));
