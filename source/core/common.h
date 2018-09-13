@@ -17,25 +17,24 @@
 #include <string>
 #include <inttypes.h>
 
-#ifdef Android
-#include "jni_bridge.h"
-#define LOGV(fmt, ...)   ALOGV(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGD(fmt, ...)   ALOGV(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGI(fmt, ...)   ALOGV(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGW(fmt, ...)   ALOGV(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGE(fmt, ...)   ALOGV(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#if defined(Android)
+#include <android/log.h>
+#define J4A_LOG_TAG "AndroidGrafika"
+#define LOGV(...)  __android_log_print(ANDROID_LOG_VERBOSE,    J4A_LOG_TAG, __VA_ARGS__)
+#define LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,      J4A_LOG_TAG, __VA_ARGS__)
+#define LOGI(...)  __android_log_print(ANDROID_LOG_INFO,       J4A_LOG_TAG, __VA_ARGS__)
+#define LOGW(...)  __android_log_print(ANDROID_LOG_WARN,       J4A_LOG_TAG, __VA_ARGS__)
+#define LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,      J4A_LOG_TAG, __VA_ARGS__)
+
+#elif defined(Win)
+
+#define LOGV(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define LOGD(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define LOGI(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define LOGW(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define LOGE(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+
 #endif
-
-
-#ifdef Win
-#define LOGV(fmt, ...)   printf(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGD(fmt, ...)   printf(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGI(fmt, ...)   printf(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGW(fmt, ...)   printf(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGE(fmt, ...)   printf(fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#endif
-
-
 
 
 #endif //ANDROIDGRAFIKA_MEDIA_STRUCT_H

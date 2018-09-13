@@ -7,9 +7,9 @@
 #include <functional>
 #include "media_common/java_avstruct.h"
 #include "core/media_common/media_struct.h"
-#include "core/media_common/audio_decoder.h"
+#include "core/media_common/av_decoder.h"
 #include "core/media_common/media_struct.h"
-#include "core/media_common/audio_encoder.h"
+#include "core/media_common/av_encoder.h"
 #include "core/media_common/av_demuxer.h"
 #include "core/media_common/av_muxer.h"
 #include "core/media_common/raw_stream_parser.h"
@@ -29,8 +29,8 @@ private:
     std::unique_ptr<AVFilterGraph, AVFilterGraphDeleter> m_pcm_filter = nullptr;
 
     std::unique_ptr<AVMuxer> m_muxer = nullptr;
-    std::unique_ptr<AudioDecoder> m_audio_decoder = nullptr;
-    std::unique_ptr<AudioEncoder> m_audio_encoder = nullptr;
+    std::unique_ptr<AVDecoder> m_audio_decoder = nullptr;
+    std::unique_ptr<AVEncoder> m_audio_encoder = nullptr;
     std::unique_ptr<AVBSFContext, AVBSFContextDeleter> m_mp4H264_bsf = nullptr;
     std::unique_ptr<AVFormatContext, AVFormatContextInputDeleter> m_inputFormat = nullptr;
 

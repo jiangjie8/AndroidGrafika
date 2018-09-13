@@ -4,9 +4,7 @@ using namespace std;
 
 
 namespace av {
-    std::map<int64_t, VideoPadding> probe_media(const char *input) {
-
-
+    std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
         std::unique_ptr<AVFormatContext, AVFormatContextInputDeleter> inputFormat_ctx = nullptr;
         std::unique_ptr<AVBSFContext, AVBSFContextDeleter> mp4H264_bsf = nullptr;
         AVFormatContext *temp_format = nullptr;
@@ -82,9 +80,6 @@ namespace av {
         iterator->second.end_pts = previous_pts;
         return paddingInfo;
     }
-
-
-
 
 
 
@@ -199,7 +194,7 @@ namespace av {
             if (ret == AVERROR_EOF)
                 return;
             if (ret == 0) {
-                printf("flush %lld\n", av_rescale_q(packet->pts, output_ctx->v_stream->codec->time_base, { 1, AV_TIME_BASE }));
+                LOGW("flush %lld\n", av_rescale_q(packet->pts, output_ctx->v_stream->codec->time_base, { 1, AV_TIME_BASE }));
                 av_packet_rescale_ts(packet.get(), output_ctx->v_stream->codec->time_base,
                     output_ctx->v_stream->time_base);
                 ret = av_interleaved_write_frame(output_ctx->outputFormat_ctx.get(), packet.get());
@@ -217,8 +212,8 @@ using namespace av;
 int main() {
 
     Context *ctx = new Context();
-    ctx->first_input_ctx->paddingInfo = probe_media(R"(D:\videoFile\test\output.mp4)");
-    ctx->second_input_ctx->paddingInfo = probe_media(R"(D:\videoFile\test\output1.mp4)");
+    ctx->first_input_ctx->paddingInfo = probe_sei_info(R"(D:\videoFile\test\output.mp4)");
+    ctx->second_input_ctx->paddingInfo = probe_sei_info(R"(D:\videoFile\test\output1.mp4)");
 
     open_input_file(R"(D:\videoFile\test\output.mp4)", ctx->first_input_ctx);
     open_input_file(R"(D:\videoFile\test\output1.mp4)", ctx->second_input_ctx);
@@ -269,7 +264,7 @@ int main() {
                 ctx->first_input_ctx->packet_queue.pop_front();
                 copyAudioStream(ctx->output_ctx, packet.get());
             }
-            printf("first %lld\n", frame->pts);
+            LOGW("first %lld\n", frame->pts);
         }
         else {
             while (true) {
@@ -286,7 +281,7 @@ int main() {
                 copyAudioStream(ctx->output_ctx, packet.get());
             }
 
-            printf("second %lld\n", frame->pts);
+            LOGW("second %lld\n", frame->pts);
             //releaseFrame(ctx->first_input_ctx, nullptr);
         }
         encodeFrame(ctx->output_ctx, frame.get());

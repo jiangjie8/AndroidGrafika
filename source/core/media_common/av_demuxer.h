@@ -1,11 +1,11 @@
-#ifndef ANDROIDGRAFIKA_AV_DEMUXER_H
-#define ANDROIDGRAFIKA_AV_DEMUXER_H
+#ifndef AV_DEMUXER_H
+#define AV_DEMUXER_H
 
 
 #include "core/media_common/media_struct.h"
-#include "core/media_common/audio_decoder.h"
+#include "core/media_common/av_decoder.h"
 #include "core/media_common/media_struct.h"
-#include "core/media_common/audio_encoder.h"
+#include "core/media_common/av_encoder.h"
 #include <thread>
 #include <memory>
 #include <functional>

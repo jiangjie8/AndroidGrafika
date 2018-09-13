@@ -17,31 +17,28 @@ __EXTERN_C_END
 
 namespace av{
 
-class AudioDecoder{
+class AVDecoder{
 private:
     std::unique_ptr<AVCodecContext, AVCodecContextDeleter> m_codec_ctx = nullptr;
-    bool  m_inputPacketEnd = false;
+    AVCodec *m_codec = nullptr;
+
 public:
 
-    AudioDecoder() = default;
-    ~AudioDecoder() = default;
+    AVDecoder() = default;
+    ~AVDecoder() = default;
 
-    int openCoder(const AVCodecParameters *parm);
-
+    int cfgCodec(const AVCodecParameters *parm);
+    int openCodec();
     int sendPacket(const AVPacket *packet);
     int receiveFrame(AVFrame *frame);
-
     int flushCodec(AVFrame *frame);
-
-
     void closeCoder(){
         m_codec_ctx.reset();
     }
 
-    const AVCodecContext *getCodecContext(){
+    AVCodecContext *getCodecContext(){
         return m_codec_ctx.get();
     }
-
 
 };
 

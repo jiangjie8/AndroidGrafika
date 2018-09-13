@@ -2,6 +2,7 @@
 #include "ff_recode.h"
 
 namespace av{
+    constexpr int AUDIO_BITRATE = 48 * 1024;
     static void initOnce(JNIEnv *env){
         static bool init = false;
         if(!init){
@@ -68,13 +69,19 @@ namespace av{
 
         const AVCodecParameters *codecParameters = getCodecParameters(AVMEDIA_TYPE_AUDIO);
         if(codecParameters != nullptr){
-            m_audio_decoder.reset(new AudioDecoder());
-            if(m_audio_decoder->openCoder(codecParameters) < 0)
+            m_audio_decoder.reset(new AVDecoder());
+            if(m_audio_decoder->cfgCodec(codecParameters) < 0)
                 m_audio_decoder.reset();
+            m_audio_decoder->openCodec();
 
-            m_audio_encoder.reset(new AudioEncoder());
-            if(m_audio_encoder->openCoder(codecParameters) < 0)
+            std::unique_ptr<AVCodecParameters, AVCodecParametersDeleter> encoderParameters(avcodec_parameters_alloc());
+            avcodec_parameters_copy(encoderParameters.get(), codecParameters);
+            encoderParameters->codec_id = AV_CODEC_ID_AAC;
+            encoderParameters->bit_rate = AUDIO_BITRATE;
+            m_audio_encoder.reset(new AVEncoder());
+            if(m_audio_encoder->cfgCodec(encoderParameters.get()) < 0)
                 m_audio_encoder.reset();
+            m_audio_encoder->openCodec();
 
             init_filter(m_audio_decoder->getCodecContext(), m_audio_encoder->getCodecContext(), "anull");
         }

@@ -107,6 +107,14 @@ namespace av{
                 avfilter_inout_free(&ptr);
             }
         }
+    }; 
+
+    struct AVCodecParametersDeleter {
+        void operator()(AVCodecParameters* ptr) const {
+            if (ptr) {
+                avcodec_parameters_free(&ptr);
+            }
+        }
     };
 }
 

@@ -7,9 +7,9 @@
 #include <thread>
 #include <memory>
 #include <functional>
-#include "core/media_common/audio_decoder.h"
+#include "core/media_common/av_decoder.h"
 #include "core/media_common/media_struct.h"
-#include "core/media_common/audio_encoder.h"
+#include "core/media_common/av_encoder.h"
 
 namespace av {
 class AVMuxer {
