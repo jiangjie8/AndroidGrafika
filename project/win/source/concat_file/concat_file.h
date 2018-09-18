@@ -11,7 +11,6 @@
 #include <functional>
 #include <iostream>
 #include <thread>
-#include <windows.h>
 #include <string>
 #include <type_traits>
 #include <thread>

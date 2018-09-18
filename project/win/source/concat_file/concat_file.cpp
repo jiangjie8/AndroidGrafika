@@ -79,7 +79,7 @@ namespace av {
         m_sei_info1 = probe_sei_info(file1);
         m_sei_info2 = probe_sei_info(file2);
 
-        m_aStream1 = std::make_unique<AVDemuxer>();
+        m_aStream1.reset(new AVDemuxer());
         if (m_aStream1->openInputFormat(file1) < 0) {
             m_aStream1.reset();
             return -1;
@@ -88,13 +88,13 @@ namespace av {
             m_aStream1.reset();
         }
 
-        m_vStream1 = std::make_unique<AVDemuxer>();
+        m_vStream1.reset(new AVDemuxer());
         if (m_vStream1->openInputFormat(file1) < 0) {
             m_vStream1.reset();
             return -1;
         }
 
-        m_vStream2 = std::make_unique<AVDemuxer>();
+        m_vStream2.reset(new AVDemuxer());
         if (m_vStream2->openInputFormat(file2) < 0) {
             m_vStream2.reset();
             return -1;
@@ -104,7 +104,7 @@ namespace av {
 
     int MergerCtx::openOutputFile(const char *file) 
     {
-        m_output = std::make_unique<AVMuxer>();
+        m_output.reset(new AVMuxer());
         if (m_output->openOutputFormat(file) < 0)
             m_output.reset();
         return 0;
@@ -116,7 +116,7 @@ namespace av {
         auto param = m_vStream1->getCodecParameters(AVMEDIA_TYPE_VIDEO);
         if (param) {
             m_frame_rate = { m_vStream1->video_codecParam.frame_rate_num , m_vStream1->video_codecParam.frame_rate_den };
-            m_decodeV1 = std::make_unique<AVDecoder>();
+            m_decodeV1.reset(new AVDecoder());
             m_decodeV1->cfgCodec(param);
             auto decode_src = m_vStream1->getStream(AVMEDIA_TYPE_VIDEO)->codec;
             auto decode_dst = m_decodeV1->getCodecContext();
@@ -128,7 +128,7 @@ namespace av {
 
         param = m_vStream2->getCodecParameters(AVMEDIA_TYPE_VIDEO);
         if (param) {
-            m_decodeV2 = std::make_unique<AVDecoder>();
+            m_decodeV2.reset(new AVDecoder());
             m_decodeV2->cfgCodec(param);
             auto decode_src = m_vStream2->getStream(AVMEDIA_TYPE_VIDEO)->codec;
             auto decode_dst = m_decodeV2->getCodecContext();
@@ -139,7 +139,7 @@ namespace av {
         }
 
         if (m_decodeV1 && m_decodeV2) {
-            m_encodeV = std::make_unique<AVEncoder>();
+            m_encodeV.reset(new AVEncoder());
             std::unique_ptr<AVCodecParameters, AVCodecParametersDeleter>
                 encode_param(avcodec_parameters_alloc());
             avcodec_parameters_copy(encode_param.get(), param);
@@ -346,11 +346,11 @@ namespace av {
 
 using namespace av;
 int main() {
-    const char *in1 = R"(D:\videoFile\test\output.mp4)";
-    const char *in2 = R"(D:\videoFile\test\output1.mp4)";
+    const char *in1 = R"(./output.mp4)";
+    const char *in2 = R"(./output1.mp4)";
     MergerCtx ctx;
     ctx.openInputStreams(in1, in2);
-    ctx.openOutputFile(R"(D:\videoFile\test\test.mp4)");
+    ctx.openOutputFile(R"(./test.mp4)");
     ctx.cfgCodec();
     ctx.mergerLoop();
     return 0;
