@@ -1,5 +1,5 @@
-#ifndef AUDIO_DECODER_H
-#define AUDIO_DECODER_H
+#ifndef CORE_MEDIA_COMMON_AV_DECODER_H
+#define CORE_MEDIA_COMMON_AV_DECODER_H
 
 #include "core/media_common/media_struct.h"
 #include "core/common.h"

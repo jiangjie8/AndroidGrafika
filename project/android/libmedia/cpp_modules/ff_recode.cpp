@@ -79,7 +79,7 @@ namespace av{
             encoderParameters->codec_id = AV_CODEC_ID_AAC;
             encoderParameters->bit_rate = AUDIO_BITRATE;
             m_audio_encoder.reset(new AVEncoder());
-            if(m_audio_encoder->cfgCodec(encoderParameters.get()) < 0)
+            if(m_audio_encoder->cfgCodec(encoderParameters.get(), "aac") < 0)
                 m_audio_encoder.reset();
             m_audio_encoder->openCodec();
 
@@ -100,7 +100,11 @@ namespace av{
             J4A_MediaInfo_setFiled_videoCodecID(env, object, m_video_codecParam.codec_id);
             J4A_MediaInfo_setFiled_width(env, object, m_video_codecParam.width);
             J4A_MediaInfo_setFiled_height(env, object, m_video_codecParam.height);
-            J4A_MediaInfo_setFiled_framerate(env, object, m_video_codecParam.frame_rate);
+            int framerate = 25;
+            if(m_video_codecParam.frame_rate_num > 0 && m_video_codecParam.frame_rate_den > 0){
+                framerate = m_video_codecParam.frame_rate_num/m_video_codecParam.frame_rate_den;
+            }
+            J4A_MediaInfo_setFiled_framerate(env, object, framerate);
         }
 
         if(m_audio_codecParam.sample_rate > 0 &&
@@ -224,7 +228,7 @@ namespace av{
         vpacket->stream_index = v_index;
         vpacket->pts = pts;
         vpacket->dts = dts;
-        vpacket->duration = av_rescale_q(1 , {1, m_video_codecParam.frame_rate}, AV_TIME_BASE_Q);
+        vpacket->duration = av_rescale_q(1 , av_inv_q({m_video_codecParam.frame_rate_num, m_video_codecParam.frame_rate_den}), AV_TIME_BASE_Q);
         vpacket->flags = buffer_flags;
         memcpy(vpacket->data, buf_ptr, buffer_size);
 
@@ -342,7 +346,9 @@ namespace av{
                 m_video_codecParam.codec_id = stream->codecpar->codec_id;
                 m_video_codecParam.width = stream->codecpar->width;
                 m_video_codecParam.height = stream->codecpar->height;
-                m_video_codecParam.frame_rate = av_q2d(stream->avg_frame_rate);
+                auto framerate = av_guess_frame_rate(m_inputFormat.get(), stream, nullptr);
+                m_video_codecParam.frame_rate_num = framerate.num;
+                m_video_codecParam.frame_rate_den = framerate.den;
 
             }
             else if (mediaType == AVMEDIA_TYPE_AUDIO) {

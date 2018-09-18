@@ -2,8 +2,8 @@
 // Created by jiangjie on 2018/8/27.
 //
 
-#ifndef MEDIA_STRUCT_H
-#define MEDIA_STRUCT_H
+#ifndef CORE_MEDIA_COMMON_MEDIA_STRUCT_H
+#define CORE_MEDIA_COMMON_MEDIA_STRUCT_H
 
 #include <string>
 #include <inttypes.h>
@@ -19,6 +19,18 @@ __EXTERN_C_BEGIN
 __EXTERN_C_END
 
 namespace av{
+    static void vp_frame_rescale_ts(AVFrame *frame, AVRational src_tb, AVRational dst_tb)
+    {
+        if (frame->pts != AV_NOPTS_VALUE)
+            frame->pts = av_rescale_q(frame->pts, src_tb, dst_tb);
+        if (frame->pkt_pts != AV_NOPTS_VALUE)
+            frame->pkt_pts = av_rescale_q(frame->pkt_pts, src_tb, dst_tb);
+        if (frame->pkt_dts != AV_NOPTS_VALUE)
+            frame->pkt_dts = av_rescale_q(frame->pkt_dts, src_tb, dst_tb);
+        if (frame->pkt_duration > 0)
+            frame->pkt_duration = av_rescale_q(frame->pkt_duration, src_tb, dst_tb);
+    }
+
 
     typedef  struct{
         std::string codec_name;
@@ -30,8 +42,8 @@ namespace av{
 
         int width = 0;
         int height = 0;
-        int frame_rate = 0;
-
+        int frame_rate_num= 0;
+        int frame_rate_den = 0;
     }VCodecParm;
 
     typedef  struct{

@@ -16,18 +16,18 @@ namespace av {
         return 0;
     }
 
-    int AVMuxer::addStream(AVCodecParameters *parm){
+    int AVMuxer::addStream(const AVCodecParameters *parm){
+        if (parm == nullptr)
+            return -1;
         int ret = 0;
-        AVFormatContext *ofmt_ctx = m_outputFormat.get();
-        AVStream *stream = avformat_new_stream(ofmt_ctx, nullptr);
+        AVStream *stream = avformat_new_stream(m_outputFormat.get(), nullptr);
         if(stream == nullptr){
             LOGE("avformat_new_stream error");
             return -1;
         }
         avcodec_parameters_copy(stream->codecpar, parm);
-        stream->codecpar->codec_tag = 0;
         avcodec_parameters_to_context(stream->codec, stream->codecpar);
-        return (ofmt_ctx->nb_streams-1);
+        return (m_outputFormat.get()->nb_streams-1);
     }
 
     int AVMuxer::setExternalData(uint8_t *data, size_t size, int stream_index){
@@ -63,14 +63,12 @@ namespace av {
 
     int AVMuxer::writePacket(AVPacket *packet){
         int ret = 0;
-        AVFormatContext *ofmt_ctx = m_outputFormat.get();
         int stream_index = packet->stream_index;
-        AVRational stream_timebae = ofmt_ctx->streams[stream_index]->time_base;
-//        ALOGE("index %d pst   %lld  size %d  flags %d ",packet->stream_index, packet->pts, packet->size, packet->flags);
+        AVRational stream_timebae = m_outputFormat->streams[stream_index]->time_base;
         av_packet_rescale_ts(packet, { 1, AV_TIME_BASE }, stream_timebae);
         ret = av_interleaved_write_frame(m_outputFormat.get(), packet);
         if (ret < 0) {
-            LOGE("write packet error");
+            LOGE("write packet error\n");
             return ret;
         }
         return ret;

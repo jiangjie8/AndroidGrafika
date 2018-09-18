@@ -2,8 +2,8 @@
 // Created by jiangjie on 2018/8/27.
 //
 
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef CORE_COMMON_H
+#define CORE_COMMON_H
 
 
 #ifdef __cplusplus

@@ -171,7 +171,7 @@ std::vector<std::string> ff_h264_sei_decode(const uint8_t *sei_start, const uint
         } while (*((uint8_t*)offset_ptr++) == 255);
 
         if (size > (sei_end - offset_ptr)) {
-            LOGE("error SEI type %d size %d truncated at %d\n", type, size, sei_end - offset_ptr);
+            LOGE("error SEI type %d size %d truncated at %ld\n", type, size, sei_end - offset_ptr);
             return sei_queue;
         }
         switch (type)

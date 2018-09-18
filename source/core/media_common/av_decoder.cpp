@@ -10,7 +10,7 @@ namespace av{
             return -1;
         }
         avcodec_parameters_to_context(m_codec_ctx.get(), parm);
-        if (!m_codec_ctx->channel_layout)
+        if (parm->codec_type == AVMEDIA_TYPE_AUDIO && !m_codec_ctx->channel_layout)
             m_codec_ctx->channel_layout = av_get_default_channel_layout(m_codec_ctx->channels);
 
         return 0;

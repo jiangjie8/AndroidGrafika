@@ -1,12 +1,9 @@
 #include "av_demuxer.h"
 namespace av{
-
-
     int AVDemuxer::openInputFormat(const char *inputStr) {
+        int ret = 0;
         m_input = inputStr;
         AVFormatContext *ifmt_ctx = nullptr;
-        int ret = 0;
-
         ret = avformat_open_input(&ifmt_ctx, inputStr, nullptr, nullptr);
         if (ret < 0) {
             LOGE("Could not open input file '%s'   %d", inputStr, ret);
@@ -18,18 +15,20 @@ namespace av{
             LOGE("Failed to retrieve input stream information");
             return ret;
         }
+        m_inputFormat.reset(ifmt_ctx); ifmt_ctx = nullptr;
         getMediaInfo();
-        m_inputFormat.reset(ifmt_ctx);
-        ifmt_ctx = nullptr;
+        
+        //av_dump_format(m_inputFormat.get(), -1, inputStr, 0);
         return ret;
     }
 
     const AVCodecParameters* AVDemuxer::getCodecParameters(enum AVMediaType type){
-        AVFormatContext *ifmt_ctx = m_inputFormat.get();
-        m_stream_info.duration = ifmt_ctx->duration;
-        m_stream_info.bitrate = ifmt_ctx->bit_rate;
-        for (int i = 0; i < ifmt_ctx->nb_streams; i++) {
-            AVStream *stream = ifmt_ctx->streams[i];
+        if (m_inputFormat == nullptr)
+            return nullptr;
+        stream_info.duration = m_inputFormat->duration;
+        stream_info.bitrate = m_inputFormat->bit_rate;
+        for (int i = 0; i < m_inputFormat->nb_streams; i++) {
+            AVStream *stream = m_inputFormat->streams[i];
             AVMediaType mediaType = stream->codecpar->codec_type;
             if(mediaType == type){
                 return stream->codecpar;
@@ -39,8 +38,12 @@ namespace av{
     }
 
     int AVDemuxer::readPacket(AVPacket *packet) {
-
         int ret = av_read_frame(m_inputFormat.get(), packet);
+        if (ret == 0) {
+            int stream_index = packet->stream_index;
+            AVRational stream_timebae = m_inputFormat->streams[stream_index]->time_base;
+            av_packet_rescale_ts(packet, stream_timebae, { 1, AV_TIME_BASE });
+        }
         return ret;
     }
 
@@ -48,23 +51,26 @@ namespace av{
     int AVDemuxer::getMediaInfo() {
         if (m_inputFormat == nullptr)
             return -1;
-        AVFormatContext *ifmt_ctx = m_inputFormat.get();
 
-        for (int i = 0; i < ifmt_ctx->nb_streams; i++) {
-            AVStream *stream = ifmt_ctx->streams[i];
+        for (int i = 0; i < m_inputFormat->nb_streams; i++) {
+            AVStream *stream = m_inputFormat->streams[i];
             AVMediaType mediaType = stream->codecpar->codec_type;
             if (mediaType == AVMEDIA_TYPE_VIDEO) {
-                m_video_codecParam.codec_id = stream->codecpar->codec_id;
-                m_video_codecParam.width = stream->codecpar->width;
-                m_video_codecParam.height = stream->codecpar->height;
-                m_video_codecParam.frame_rate = av_q2d(stream->avg_frame_rate);
+                video_codecParam.codec_type = AVMEDIA_TYPE_VIDEO;
+                video_codecParam.codec_id = stream->codecpar->codec_id;
+                video_codecParam.width = stream->codecpar->width;
+                video_codecParam.height = stream->codecpar->height;
+                auto framerate = av_guess_frame_rate(m_inputFormat.get(), stream, nullptr);
+                video_codecParam.frame_rate_num = framerate.num;
+                video_codecParam.frame_rate_den = framerate.den;
 
             } else if (mediaType == AVMEDIA_TYPE_AUDIO) {
-                m_audio_codecParam.codec_id = stream->codecpar->codec_id;
-                m_audio_codecParam.channels = stream->codecpar->channels;
-                m_audio_codecParam.sample_rate = stream->codecpar->sample_rate;
-                m_audio_codecParam.sample_depth = stream->codecpar->bits_per_coded_sample;
-                m_audio_codecParam.frame_size = stream->codecpar->frame_size;
+                audio_codecParam.codec_type = AVMEDIA_TYPE_AUDIO;
+                audio_codecParam.codec_id = stream->codecpar->codec_id;
+                audio_codecParam.channels = stream->codecpar->channels;
+                audio_codecParam.sample_rate = stream->codecpar->sample_rate;
+                audio_codecParam.sample_depth = stream->codecpar->bits_per_coded_sample;
+                audio_codecParam.frame_size = stream->codecpar->frame_size;
             }
         }
         return 0;

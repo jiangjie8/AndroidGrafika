@@ -2,8 +2,8 @@
 // Created by jiangjie on 2018/8/27.
 //
 
-#ifndef ANDROIDGRAFIKA_AV_MUXER_H
-#define ANDROIDGRAFIKA_AV_MUXER_H
+#ifndef CORE_MEDIA_COMMON_AV_MUXER_H
+#define CORE_MEDIA_COMMON_AV_MUXER_H
 #include <thread>
 #include <memory>
 #include <functional>
@@ -23,7 +23,7 @@ public:
     /*
      * return stream index;
      * */
-    int addStream(AVCodecParameters *parm);
+    int addStream(const AVCodecParameters *parm);
     int setExternalData(uint8_t *data, size_t size, int stream_index);
     int writeHeader();
     int writePacket(AVPacket *packet);
@@ -33,8 +33,10 @@ public:
             av_write_trailer(m_outputFormat.get());
         m_outputFormat.reset();
     }
-
-public:
+    const AVOutputFormat *getOutputFormat() {
+        return m_outputFormat->oformat;
+    }
+private:
     std::unique_ptr<AVFormatContext, AVFormatContextOutputDeleter> m_outputFormat = nullptr;
     std::string m_output;
 };

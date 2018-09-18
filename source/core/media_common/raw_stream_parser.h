@@ -2,8 +2,8 @@
 // Created by jiangjie on 2018/8/29.
 //
 
-#ifndef ANDROIDGRAFIKA_RAW_STREAM_PARSER_H
-#define ANDROIDGRAFIKA_RAW_STREAM_PARSER_H
+#ifndef CORE_MEDIA_COMMON_RAW_STREAM_PARSER_H
+#define CORE_MEDIA_COMMON_RAW_STREAM_PARSER_H
 
 #include <inttypes.h>
 #include <vector>

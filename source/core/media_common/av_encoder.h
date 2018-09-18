@@ -1,5 +1,5 @@
-#ifndef AUDIO_ENCODER_H
-#define AUDIO_ENCODER_H
+#ifndef CORE_MEDIA_COMMON_AV_ENCODER_H
+#define CORE_MEDIA_COMMON_AV_ENCODER_H
 
 #include "media_struct.h"
 __EXTERN_C_BEGIN
@@ -21,7 +21,7 @@ public:
 
     AVEncoder() = default;
     ~AVEncoder() = default;
-    int cfgCodec(const AVCodecParameters *parm);
+    int cfgCodec(const AVCodecParameters *parm, const char* codec_name);
     int openCodec();
     
     int sendFrame(const AVFrame *frame);

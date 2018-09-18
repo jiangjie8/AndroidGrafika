@@ -1,5 +1,5 @@
-#ifndef BSF_FILTER_H
-#define BSF_FILTER_H
+#ifndef CORE_MEDIA_COMMON_BSF_FILTER_H
+#define CORE_MEDIA_COMMON_BSF_FILTER_H
 
 #include "core/media_common/media_struct.h"
 

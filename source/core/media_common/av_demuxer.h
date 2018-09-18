@@ -1,5 +1,5 @@
-#ifndef AV_DEMUXER_H
-#define AV_DEMUXER_H
+#ifndef CORE_MEDIA_COMMON_AV_DEMUXER_H
+#define CORE_MEDIA_COMMON_AV_DEMUXER_H
 
 
 #include "core/media_common/media_struct.h"
@@ -15,9 +15,9 @@ namespace av {
 class AVDemuxer {
 
 public:
-    VCodecParm m_video_codecParam = VCodecParm();
-    ACodecParm m_audio_codecParam = ACodecParm();
-    StreamInfo m_stream_info = StreamInfo();
+    VCodecParm video_codecParam = VCodecParm();
+    ACodecParm audio_codecParam = ACodecParm();
+    StreamInfo stream_info = StreamInfo();
 
 public:
     AVDemuxer() = default;
@@ -30,6 +30,24 @@ public:
 
     const AVCodecParameters *getCodecParameters(enum AVMediaType type);
 
+    const AVInputFormat *getInputFormat() {
+        return m_inputFormat->iformat;
+    }
+
+    const AVStream *getStream(enum AVMediaType type) {
+        for (int i = 0; i < m_inputFormat->nb_streams; ++i) {
+            AVStream *stream = m_inputFormat->streams[i];
+            if (stream->codecpar->codec_type == type) {
+                return stream;
+            }
+        }
+        return nullptr;
+    }
+    const AVStream *getStream(int index) {
+        if(index < m_inputFormat->nb_streams)
+            return m_inputFormat->streams[index];
+        return nullptr;
+    }
     int readPacket(AVPacket *packet);
 
     void closeInputFormat() {
