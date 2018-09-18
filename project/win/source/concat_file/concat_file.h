@@ -6,6 +6,7 @@
 #include "core/media_common/av_demuxer.h"
 #include "core/media_common/av_muxer.h"
 #include "core/media_common/av_decoder.h"
+#include "core/utils/jas_getopt.h"
 #include "core/media_common/av_encoder.h"
 #include <iostream>
 #include <functional>
@@ -85,5 +86,77 @@ private:
     int encodeWriteFrame(AVEncoder *encoder, AVFrame *frame);
 
 };
+
+typedef struct CommandCtx
+{
+    std::string input1;
+    std::string input2;
+    std::string output;
+    std::string vcodec;
+
+}CommandCtx;
+static CommandCtx command_t;
+
+static void print_help() {
+    printf("Usage: \n"
+        "  [-h                                  printf help info]\n"
+        "  [--input1    input1.mp4              input file name]\n"
+        "  [--input1    input2.mp4              input file name]\n"
+        "  [--output    output.mp4              output file name]\n"
+        "  [--cv        crf=22:aq-mode=1        output file name]\n"
+    );
+}
+
+static int parser_option(int argc,  char *argv[]) {
+    jas_opt_t opt_list[] = {
+    { ID_FOURCC('h', 'e', 'l', 'p'), "h",           0 },
+    { ID_FOURCC('i', 'p', 't', '1'), "input1",      JAS_OPT_HASARG },
+    { ID_FOURCC('i', 'p', 't', '2'), "input2",      JAS_OPT_HASARG },
+    { ID_FOURCC('o', 'p', 't', ' '), "output",      JAS_OPT_HASARG },
+    { ID_FOURCC('c', 'o', 'd', 'v'), "cv",          JAS_OPT_HASARG },
+    { -1, nullptr, 0 }
+    };
+
+    for (;;) {
+        int tag = jas_getopt(argc, argv, opt_list);
+        if (tag == JAS_GETOPT_EOF)
+            break;
+        switch (tag)
+        {
+        case ID_FOURCC('h', 'e', 'l', 'p'): {
+            print_help();
+            exit(0);
+            break;
+        }
+        case ID_FOURCC('i', 'p', 't', '1'): {
+            command_t.input1 = jas_optarg;
+            break;
+        }
+        case ID_FOURCC('i', 'p', 't', '2'): {
+            command_t.input2 = jas_optarg;
+            break;
+        }
+        case ID_FOURCC('o', 'p', 't', ' '): {
+            command_t.output = jas_optarg;
+            break;
+        }
+        case ID_FOURCC('c', 'o', 'd', 'v'): {
+            command_t.vcodec = jas_optarg;
+            break;
+        }
+        default:
+            break;
+        }
+    }
+    if (command_t.input1.empty() ||
+        command_t.input2.empty() ||
+        command_t.output.empty()) {
+        print_help();
+        return -1;
+    }
+    return 0;
+}
+
+
 
 }

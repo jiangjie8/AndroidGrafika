@@ -37,11 +37,11 @@ namespace av{
         return 0;
     }
 
-    int AVEncoder::openCodec() {
+    int AVEncoder::openCodec(AVDictionary **options) {
         if (m_codec_ctx == nullptr)
             return -1;
         int ret = 0;
-        ret = avcodec_open2(m_codec_ctx.get(), m_codec, nullptr);
+        ret = avcodec_open2(m_codec_ctx.get(), m_codec, options);
         if (ret < 0) {
             LOGE("Failed to open encoder ");
             m_codec_ctx.reset();

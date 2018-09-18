@@ -28,12 +28,11 @@
 
 #elif defined(Win)
 
-#define LOGV(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGD(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGI(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGW(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define LOGE(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-
+#define LOGV(fmt, ...)   printf(fmt, ##__VA_ARGS__)
+#define LOGD(fmt, ...)   printf(fmt, ##__VA_ARGS__)
+#define LOGI(fmt, ...)   printf(fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...)   printf(fmt, ##__VA_ARGS__)
+#define LOGE(fmt, ...)   printf(fmt, ##__VA_ARGS__)
 #elif defined(Linux)
 #include <unistd.h>
 #define LOGV(fmt, ...)   printf("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)

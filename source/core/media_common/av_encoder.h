@@ -22,7 +22,7 @@ public:
     AVEncoder() = default;
     ~AVEncoder() = default;
     int cfgCodec(const AVCodecParameters *parm, const char* codec_name);
-    int openCodec();
+    int openCodec(AVDictionary **options = nullptr);
     
     int sendFrame(const AVFrame *frame);
     int receivPacket(AVPacket *avpkt);

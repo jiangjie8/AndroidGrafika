@@ -148,8 +148,14 @@ namespace av {
                 m_encodeV->getCodecContext()->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
             m_encodeV->getCodecContext()->time_base = m_decodeV1->getCodecContext()->time_base;
             m_encodeV->getCodecContext()->ticks_per_frame = m_decodeV1->getCodecContext()->ticks_per_frame;
-            if ((ret = m_encodeV->openCodec()) < 0)
+
+            AVDictionary *options = nullptr;
+            av_dict_set(&options, "tune", "film", 0);
+            av_dict_set(&options, "preset", "veryfast", 0);
+            av_dict_set(&options, "x264-params", "crf=22:aq-mode=1", 0);
+            if ((ret = m_encodeV->openCodec(&options)) < 0)
                 m_encodeV.reset();
+            av_dict_free(&options);
         }
         return ret;
     }
@@ -345,12 +351,21 @@ namespace av {
 
 
 using namespace av;
-int main() {
-    const char *in1 = R"(./output.mp4)";
-    const char *in2 = R"(./output1.mp4)";
+int main(int argc, char *argv[]) {
+    if (parser_option(argc, argv) < 0) {
+        LOGE("command : ");
+        for (int i = 0; i < argc; ++i) {
+            LOGE("%s ", argv[i]);
+        }
+        LOGE("\n");
+        return -1;
+    }
+        
+    const char *in1 = command_t.input1.c_str();
+    const char *in2 = command_t.input2.c_str();
     MergerCtx ctx;
     ctx.openInputStreams(in1, in2);
-    ctx.openOutputFile(R"(./test.mp4)");
+    ctx.openOutputFile(command_t.output.c_str());
     ctx.cfgCodec();
     ctx.mergerLoop();
     return 0;
