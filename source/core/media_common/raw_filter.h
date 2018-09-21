@@ -2,6 +2,8 @@
 #define CORE_MEDIA_COMMON_RAW_FILTER_H
 
 #include "core/media_common/media_struct.h"
+#include <thread>
+#include <memory>
 namespace av {
 class FilterGraph {
 public:

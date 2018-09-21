@@ -6,7 +6,6 @@ file(GLOB SRCS
 
 add_executable(${MODULE} ${SRCS})
 target_include_directories(${MODULE} PRIVATE ${CORE_PATH})
-target_link_libraries(${MODULE} ${FFMPEG_LIBRARYS} )
 target_link_libraries(${MODULE} ${CORE_MODULE})
+target_link_libraries(${MODULE} ${FFMPEG_LIBRARYS} )
 
-add_dependencies(${MODULE} ${CORE_MODULE})

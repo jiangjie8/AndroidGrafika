@@ -8,7 +8,6 @@
 #include "core/media_common/av_encoder.h"
 #include <thread>
 #include <memory>
-#include <functional>
 
 namespace av {
 
