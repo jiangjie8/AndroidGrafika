@@ -34,7 +34,6 @@ private:
     std::unique_ptr<AVBSFContext, AVBSFContextDeleter> m_mp4H264_bsf = nullptr;
     std::string m_input;
     int64_t m_timestamp_start = AV_NOPTS_VALUE;
-    bool m_get_spspps = false;
     uint8_t *m_spspps_buffer = nullptr;
     int m_spspps_buffer_size = 0;
     int v_index = -1;
@@ -64,7 +63,7 @@ private:
     int initH264Bsf(const AVCodecParameters *codecpar);
 
     int writeAudioPacket(int64_t video_pts);
-    int getVideoFrame(AVFrame *frame);
+    int getAudioFrame(AVFrame *frame);
     int filterAudioFrame(AVFrame *frame);
     int drainAudioEncoder(const AVFrame *frame, AVPacket *packet);
 
@@ -75,7 +74,6 @@ private:
             av_free(m_spspps_buffer);
             m_spspps_buffer = nullptr;
             m_spspps_buffer_size = 0;
-            m_get_spspps = false;
         }
         m_inputFormat.reset();
         m_audioStream.reset();

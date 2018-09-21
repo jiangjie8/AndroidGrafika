@@ -33,9 +33,9 @@ public class RecodeMediaActivity extends AppCompatActivity {
     int loopNumber = 0;
     void startRecoder(){
         mediaRecode = AVRecodeInterface.getRecodeInstance();
-        mediaRecode.openInputSource("/sdcard/Download/avc_1088.mp4");
+        mediaRecode.openInputSource("/sdcard/Download/small.mp4");
         mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "avc-%03d.mp4",
-                960, 544, 1500, 10000);
+                960, 544, 1500, 5000);
 //        mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "hevc_1088p_2000kb-%03d.mp4",
 //                1920, 1088, 2000, 100000);
         mediaRecode.setRecodeEventListener(new AVRecodeInterface.onRecodeEventListener() {
@@ -52,7 +52,7 @@ public class RecodeMediaActivity extends AppCompatActivity {
             @Override
             public void onRecodeFinish() {
                 if(mWork){
-//                    startRecoder();
+                    startRecoder();
                 }
             }
         }, new Handler(getMainLooper()));

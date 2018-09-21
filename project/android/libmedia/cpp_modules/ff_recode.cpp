@@ -158,7 +158,8 @@ namespace av{
         int ret = 0;
         std::unique_ptr<AVPacket, AVPacketDeleter> packet(av_packet_alloc());
         while(true){
-            av_init_packet(packet.get());
+//            av_packet_unref(packet.get());
+//            av_init_packet(packet.get());
             ret = m_inputFormat->readPacket(packet.get());
             if(ret == AVERROR_EOF){
                 writeAudioPacket(AV_NOPTS_VALUE);
@@ -183,11 +184,6 @@ namespace av{
         }
 
         return ret;
-
-
-
-
-
     }
     int FFRecoder::writeInterleavedPacket(AVPacket *packet){
         if(m_timestamp_start == AV_NOPTS_VALUE){
@@ -219,8 +215,7 @@ namespace av{
         vpacket->duration = av_rescale_q(1 , av_inv_q({m_video_codecParam.frame_rate_num, m_video_codecParam.frame_rate_den}), AV_TIME_BASE_Q);
         vpacket->flags = buffer_flags;
         memcpy(vpacket->data, buf_ptr, buffer_size);
-        if(!m_get_spspps &&  (buffer_flags & BUFFER_FLAG_EXTERNAL_DATA) != 0){
-            m_get_spspps = true;
+        if(m_spspps_buffer == nullptr &&  (buffer_flags & BUFFER_FLAG_EXTERNAL_DATA) != 0){
             m_spspps_buffer_size = buffer_size;
             m_spspps_buffer = (uint8_t *)av_malloc(m_spspps_buffer_size);
             memcpy(m_spspps_buffer, vpacket->data, m_spspps_buffer_size);
@@ -253,14 +248,15 @@ namespace av{
         }
         return ret;
     }
-    int FFRecoder::getVideoFrame(AVFrame *frame){
+    int FFRecoder::getAudioFrame(AVFrame *frame){
         if(m_audioStream == nullptr)
             return -1;
         int ret = 0;
         while(true){
             std::unique_ptr<AVPacket, AVPacketDeleter> packet(av_packet_alloc());
             while (true) {
-                av_init_packet(packet.get());
+//                av_packet_unref(packet.get());
+//                av_init_packet(packet.get());
                 ret = m_audioStream->readPacket(packet.get());
                 if(ret == AVERROR_EOF){
                     break;
@@ -316,7 +312,7 @@ namespace av{
         int ret = 0;
         while(true ){
             std::unique_ptr<AVFrame, AVFrameDeleter> aframe(av_frame_alloc());
-            ret = getVideoFrame(aframe.get());
+            ret = getAudioFrame(aframe.get());
             if(ret == AVERROR_EOF){
 
             }

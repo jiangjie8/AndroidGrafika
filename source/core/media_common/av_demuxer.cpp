@@ -42,6 +42,9 @@ namespace av{
             return AVERROR_EOF;
         }
         int ret = 0;
+        if (packet->data != nullptr) {
+            av_packet_unref(packet);
+        }
         ret = av_read_frame(m_inputFormat.get(), packet);
         if (ret == AVERROR_EOF) {
             m_readEOF = true;
