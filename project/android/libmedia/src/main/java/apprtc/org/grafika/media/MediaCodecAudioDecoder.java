@@ -195,13 +195,12 @@ public class MediaCodecAudioDecoder implements AVMediaCodec {
             return null;
         }
         try{
-            if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                Logging.w(TAG, "decode end, no output frame Available");
-                decodeFrameEnd = true;
-                return null;
-            }
             final int result = mediaCodec.dequeueOutputBuffer(codecBufferInfo, dequeueTimeoutUs);
             if(result >= 0){
+                if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
+                    decodeFrameEnd = true;
+                    Logging.w(TAG, "decode end, no frame will be available after this");
+                }
                 ByteBuffer outputBuffer = mediaCodec.getOutputBuffer(result);
                 outputBuffer.position(codecBufferInfo.offset);
                 outputBuffer.limit(codecBufferInfo.offset + codecBufferInfo.size);

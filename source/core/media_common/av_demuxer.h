@@ -60,6 +60,7 @@ private:
 private:
     std::unique_ptr<AVFormatContext, AVFormatContextInputDeleter> m_inputFormat = nullptr;
     std::string m_input;
+    bool m_readEOF = false;
 
 };
 

@@ -182,6 +182,9 @@ public class AVMediaRecode implements AVRecodeInterface {
 
     boolean writePacket(AVPacket packet){
         int ret = -1;
+        if(packet.bufferSize == 0 && packet.ptsUs == 0 && packet.dtsUs == 0){
+            return  true;
+        }
         if(mEngineHandleDemuxer != 0){
             getExternalData();
             if(mExternalBuffer == null){

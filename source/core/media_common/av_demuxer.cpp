@@ -1,4 +1,4 @@
-#include "av_demuxer.h"
+#include "core/media_common/av_demuxer.h"
 namespace av{
     int AVDemuxer::openInputFormat(const char *inputStr) {
         int ret = 0;
@@ -38,8 +38,15 @@ namespace av{
     }
 
     int AVDemuxer::readPacket(AVPacket *packet) {
-        int ret = av_read_frame(m_inputFormat.get(), packet);
-        if (ret == 0) {
+        if (m_readEOF) {
+            return AVERROR_EOF;
+        }
+        int ret = 0;
+        ret = av_read_frame(m_inputFormat.get(), packet);
+        if (ret == AVERROR_EOF) {
+            m_readEOF = true;
+        }
+        else if (ret == 0) {
             int stream_index = packet->stream_index;
             AVRational stream_timebae = m_inputFormat->streams[stream_index]->time_base;
             av_packet_rescale_ts(packet, stream_timebae, { 1, AV_TIME_BASE });

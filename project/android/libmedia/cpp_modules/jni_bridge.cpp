@@ -128,7 +128,7 @@ JNIEXPORT jint JNICALL demuxer_closeOutputFormat(JNIEnv *env, jclass clazz, jlon
 
 JNIEXPORT jint JNICALL demuxer_readPacket(JNIEnv *env, jclass clazz, jlong engineHandle, jobject packet) {
     av::FFRecoder *engine = reinterpret_cast<av::FFRecoder*>(engineHandle);
-    return engine->readPacket(env, packet);
+    return engine->readVideoPacket(env, packet);
 }
 
 JNIEXPORT jint JNICALL demuxer_writePacket(JNIEnv *env, jclass clazz, jlong engineHandle, jobject packet) {

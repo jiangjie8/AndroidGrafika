@@ -33,7 +33,6 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
         VIDEO_CODEC_H264;
     }
 
-
     // Timeout for input buffer dequeue.
     private static final int DEQUEUE_TIMEOUT = 0;
     // Timeout for codec releasing.
@@ -46,6 +45,9 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
     private static MediaCodecVideoDecoderErrorCallback errorCallback = null;
     private static int codecErrors = 0;
     // List of disabled codec types - can be set from application.
+
+    private long m_input_packet = 0;
+    private long m_output_frame = 0;
 
     private Thread mediaCodecThread;
     private MediaCodec mediaCodec;
@@ -205,6 +207,8 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
             surface = null;
             textureListener.release();
         }
+        m_input_packet = 0;
+        m_output_frame = 0;
         Logging.d(TAG, "Java releaseDecoder done");
     }
 
@@ -233,6 +237,7 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
                 inputPacketEnd = true;
             }
             else{
+                m_input_packet++;
                 ByteBuffer inputBuffer = mediaCodec.getInputBuffer(inputBufferIndex);
                 inputBuffer.position(0);
                 inputBuffer.limit(size);
@@ -379,11 +384,6 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
         // Drain the decoder until receiving a decoded buffer or hitting
         // MediaCodec.INFO_TRY_AGAIN_LATER.
         while (true) {
-            if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                Logging.w(TAG, "decode end, no output frame Available");
-                decodeFrameEnd = true;
-                return null;
-            }
             final int result = mediaCodec.dequeueOutputBuffer(codecBufferInfo, timeoutUs);
             if(result == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED){
             }
@@ -400,9 +400,7 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
             else {
                 if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
                     decodeFrameEnd = true;
-                    mediaCodec.releaseOutputBuffer(result, false /* render */);
-                    Logging.w(TAG, "decode end, no output frame Available");
-                    return null;
+                    Logging.w(TAG, "decode end, no frame will be available after this");
                 }
                 return new CodecBufferInfo(result, codecBufferInfo.size, codecBufferInfo.offset, codecBufferInfo.flags, codecBufferInfo.presentationTimeUs, false);
             }
@@ -429,12 +427,12 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
             }
         }
 
-
         MaybeRenderDecodedTextureBuffer();
         // Check if there is texture ready now by waiting max |dequeueTimeoutMs|.
         DecodedTextureBuffer renderedBuffer = textureListener.dequeueTextureBuffer(dequeueTimeoutUs);
         if (renderedBuffer != null) {
             MaybeRenderDecodedTextureBuffer();
+            m_output_frame++;
             return renderedBuffer;
         }
 
@@ -468,13 +466,20 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
 
     public DecodedTextureBuffer flushDecoder(){
         checkOnMediaCodecThread();
-        if(!inputPacketEnd){
-            sendPacket(null, 0, 0);
-        }
         if(!decodeFrameEnd){
-//            Logging.w(TAG, "flush decode");
-            return dequeueTextureBuffer(1000 * 1000);
+            DecodedTextureBuffer buffer = dequeueTextureBuffer(200 * 1000);
+            if(buffer == null){
+//                if(dequeuedSurfaceOutputBuffers.size() == 0)
+                if(!inputPacketEnd){
+                    sendPacket(null, 0, 0);
+                }
+                buffer = dequeueTextureBuffer(500 * 1000);
+            }
+            if(buffer != null)
+                return buffer;
         }
+        if(m_input_packet != m_output_frame)
+            Logging.e(TAG, "inputPacket number " + m_input_packet + ",  outputFrame number " + m_output_frame);
         return null;
     }
 

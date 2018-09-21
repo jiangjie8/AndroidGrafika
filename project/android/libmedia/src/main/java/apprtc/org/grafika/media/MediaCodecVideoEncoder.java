@@ -261,7 +261,7 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
         checkOnMediaCodecThread();
         if(!encodePacketEnd){
 //            Logging.w(TAG, "flush encode");
-            return dequeueOutputBuffer(1000 * 1000);
+            return dequeueOutputBuffer(250 * 1000);
         }
         return null;
     }
@@ -276,12 +276,6 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
         }
         checkOnMediaCodecThread();
         try {
-            if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                Logging.w(TAG, "encode end, no output packet Available");
-                encodePacketEnd = true;
-                return null;
-            }
-
             int result = mediaCodec.dequeueOutputBuffer(codecBufferInfo, dequeueTimeoutUs);
             // Check if this is config frame and save configuration data.
             if (result >= 0) {
@@ -306,20 +300,17 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
                 }
             }
             if (result >= 0) {
+                if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
+                    encodePacketEnd = true;
+                    Logging.w(TAG, "encode end, no packet will be available after this");
+                }
+
                 // MediaCodec doesn't care about Buffer position/remaining/etc so we can
                 // mess with them to get a slice and avoid having to pass extra
                 // (BufferInfo-related) parameters back to C++.
                 ByteBuffer outputBuffer = mediaCodec.getOutputBuffer(result);
                 outputBuffer.position(codecBufferInfo.offset);
                 outputBuffer.limit(codecBufferInfo.offset + codecBufferInfo.size);
-
-                if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
-                    Logging.w(TAG, "encode end, no output packet Available");
-                    encodePacketEnd = true;
-                    releaseOutputBuffer(result);
-                    return null;
-                }
-
                 // Check key frame flag.
                 boolean isKeyFrame = (codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0;
                 if (isKeyFrame) {

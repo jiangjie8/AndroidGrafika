@@ -16,6 +16,7 @@ __EXTERN_C_BEGIN
 #include "libavfilter/buffersink.h"
 #include "libavfilter/buffersrc.h"
 #include "libavutil/opt.h"
+#include "libswscale/swscale.h"
 __EXTERN_C_END
 
 namespace av{

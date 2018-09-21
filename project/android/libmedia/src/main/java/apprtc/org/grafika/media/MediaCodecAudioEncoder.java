@@ -168,22 +168,8 @@ public class MediaCodecAudioEncoder implements AVMediaCodec{
         }
         checkOnMediaCodecThread();
         try {
-            if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                Logging.w(TAG, "encode end, no output packet Available");
-                encodePacketEnd = true;
-                return null;
-            }
-
             int result = mediaCodec.dequeueOutputBuffer(codecBufferInfo, dequeueTimeoutUs);
             if (result >= 0) {
-
-                if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
-                    Logging.w(TAG, "encode end, no output packet Available");
-                    encodePacketEnd = true;
-                    releaseOutputBuffer(result);
-                    return null;
-                }
-
                 boolean isConfigFrame = (codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0;
                 if (isConfigFrame) {
                     Logging.d(TAG, "Config frame generated. Offset: " + codecBufferInfo.offset + ". Size: " + codecBufferInfo.size);
@@ -200,6 +186,10 @@ public class MediaCodecAudioEncoder implements AVMediaCodec{
             }
 
             if (result >= 0) {
+                if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
+                    encodePacketEnd = true;
+                    Logging.w(TAG, "encode end, no packet will be available after this");
+                }
                 ByteBuffer outputBuffer = mediaCodec.getOutputBuffer(result);
                 outputBuffer.position(codecBufferInfo.offset);
                 outputBuffer.limit(codecBufferInfo.offset + codecBufferInfo.size);

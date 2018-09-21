@@ -14,6 +14,7 @@
 #include "core/media_common/av_muxer.h"
 #include "core/media_common/raw_stream_parser.h"
 #include "core/media_common/bsf_filter.h"
+#include "core/media_common/raw_filter.h"
 namespace av {
 
 class FFRecoder {
@@ -24,17 +25,15 @@ public:
 
 private:
 
-    AVFilterContext *m_buffersink_ctx = nullptr;
-    AVFilterContext *m_buffersrc_ctx = nullptr;
-    std::unique_ptr<AVFilterGraph, AVFilterGraphDeleter> m_pcm_filter = nullptr;
-
+    FilterGraph mFilterGraph;
     std::unique_ptr<AVMuxer> m_muxer = nullptr;
     std::unique_ptr<AVDecoder> m_audio_decoder = nullptr;
     std::unique_ptr<AVEncoder> m_audio_encoder = nullptr;
+    std::unique_ptr<AVDemuxer> m_inputFormat = nullptr;
+    std::unique_ptr<AVDemuxer> m_audioStream = nullptr;
     std::unique_ptr<AVBSFContext, AVBSFContextDeleter> m_mp4H264_bsf = nullptr;
-    std::unique_ptr<AVFormatContext, AVFormatContextInputDeleter> m_inputFormat = nullptr;
-
     std::string m_input;
+    int64_t m_timestamp_start = AV_NOPTS_VALUE;
     bool m_get_spspps = false;
     uint8_t *m_spspps_buffer = nullptr;
     int m_spspps_buffer_size = 0;
@@ -49,6 +48,7 @@ public:
 
     int closeInputFormat(){
         m_inputFormat.reset();
+        m_audioStream.reset();
         return 0;
     }
     int getMediaInfo(JNIEnv *env, jobject object);
@@ -56,16 +56,20 @@ public:
     //delete this object after closeOutputFormat
     int closeOutputFormat();
 
-    int readPacket(JNIEnv *env, jobject packet_obj);
+    int readVideoPacket(JNIEnv *env, jobject packet_obj);
+
     int writePacket(JNIEnv *env, jobject packet_obj);
 
 private:
-    int init_filter(const AVCodecContext *dec_ctx, const AVCodecContext *enc_ctx, const char *filter_spec);
     int initH264Bsf(const AVCodecParameters *codecpar);
-    int recodeWriteAudio(AVPacket *packet);
-    int drainAudioEncoder(const AVFrame *frame);
-    int probeMedia();
-    const AVCodecParameters *getCodecParameters(enum AVMediaType type);
+
+    int writeAudioPacket(int64_t video_pts);
+    int getVideoFrame(AVFrame *frame);
+    int filterAudioFrame(AVFrame *frame);
+    int drainAudioEncoder(const AVFrame *frame, AVPacket *packet);
+
+    int writeInterleavedPacket(AVPacket *packet);
+
     void release(){
         if(m_spspps_buffer != nullptr){
             av_free(m_spspps_buffer);
@@ -74,6 +78,7 @@ private:
             m_get_spspps = false;
         }
         m_inputFormat.reset();
+        m_audioStream.reset();
         m_muxer.reset();
         m_audio_decoder.reset();
         m_audio_encoder.reset();

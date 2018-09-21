@@ -8,6 +8,7 @@
 #include "core/media_common/av_decoder.h"
 #include "core/utils/jas_getopt.h"
 #include "core/media_common/av_encoder.h"
+#include "core/media_common/raw_filter.h"
 #include <iostream>
 #include <functional>
 #include <iostream>
@@ -22,27 +23,27 @@
 
 namespace av {
 
-    constexpr const char *VP_SMALL = "vp_small";
-    constexpr const char *VP_LARGER = "vp_larger";
+constexpr const char *VP_SMALL = "vp_small";
+constexpr const char *VP_LARGER = "vp_larger";
 
-    enum class VStreamType : uint8_t
+enum class VStreamType : uint8_t
+{
+    UNKnow,
+    SMALL,
+    LARGE
+};
+
+typedef struct VideoPadding {
+    VStreamType streamType = VStreamType::UNKnow;
+    int64_t start_pts = AV_NOPTS_VALUE;
+    int64_t end_pts = AV_NOPTS_VALUE;
+    VideoPadding(VStreamType type, int64_t startpts, int64_t endpts) :
+        streamType(type), start_pts(startpts), end_pts(endpts)
     {
-        UNKnow,
-        SMALL,
-        LARGE
-    };
+    }
+}VideoPadding;
 
-    typedef struct VideoPadding {
-        VStreamType streamType = VStreamType::UNKnow;
-        int64_t start_pts = AV_NOPTS_VALUE;
-        int64_t end_pts = AV_NOPTS_VALUE;
-        VideoPadding(VStreamType type, int64_t startpts, int64_t endpts) :
-            streamType(type), start_pts(startpts), end_pts(endpts)
-        {
-        }
-    }VideoPadding;
-
-
+using std::unique_ptr;
 class MergerCtx {
 
 public:
@@ -56,7 +57,7 @@ public:
         m_output.reset();
         m_encodeV.reset();
     }
-    //void probeSEI();
+
     int openInputStreams(const char *file1, const char *file2);
 
     int openOutputFile(const char *file);
@@ -66,13 +67,14 @@ public:
     int mergerLoop();
     
 private:
-    std::unique_ptr<AVDemuxer> m_aStream1 = nullptr;
-    std::unique_ptr<AVDemuxer> m_vStream1 = nullptr;
-    std::unique_ptr<AVDemuxer> m_vStream2 = nullptr;
-    std::unique_ptr<AVDecoder> m_decodeV1 = nullptr;
-    std::unique_ptr<AVDecoder> m_decodeV2 = nullptr;
-    std::unique_ptr<AVMuxer> m_output = nullptr;
-    std::unique_ptr<AVEncoder> m_encodeV = nullptr;
+    unique_ptr<FilterGraph> m_filterGraph = nullptr;
+    unique_ptr<AVDemuxer> m_aStream1 = nullptr;
+    unique_ptr<AVDemuxer> m_vStream1 = nullptr;
+    unique_ptr<AVDemuxer> m_vStream2 = nullptr;
+    unique_ptr<AVDecoder> m_decodeV1 = nullptr;
+    unique_ptr<AVDecoder> m_decodeV2 = nullptr;
+    unique_ptr<AVMuxer> m_output = nullptr;
+    unique_ptr<AVEncoder> m_encodeV = nullptr;
 
     std::map<int64_t, VideoPadding> m_sei_info1;
     std::map<int64_t, VideoPadding> m_sei_info2;
@@ -84,7 +86,7 @@ private:
     int getVideoFrame(AVDemuxer *demuxer, AVDecoder *decoder, AVFrame *frame);
     int writeAudioPacket(AVDemuxer *input, AVMuxer  *output, int64_t pts_flag, int index);
     int encodeWriteFrame(AVEncoder *encoder, AVFrame *frame);
-
+    int frameScale(AVFrame *frame);
 };
 
 typedef struct CommandCtx
@@ -156,7 +158,5 @@ static int parser_option(int argc,  char *argv[]) {
     }
     return 0;
 }
-
-
 
 }
