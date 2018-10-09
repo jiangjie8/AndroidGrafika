@@ -9,6 +9,8 @@ import android.util.Log;
 import android.view.SurfaceView;
 import android.view.View;
 
+import java.io.File;
+
 import apprtc.org.grafika.AVRecodeInterface;
 
 import apprtc.org.grafika.media.AVMediaRecode;
@@ -33,9 +35,13 @@ public class RecodeMediaActivity extends AppCompatActivity {
     int loopNumber = 0;
     void startRecoder(){
         mediaRecode = AVRecodeInterface.getRecodeInstance();
-        mediaRecode.openInputSource("/sdcard/Download/small.mp4");
+        mediaRecode.openInputSource("/sdcard/Download/avc_1088.mp4");
+        File d = new File("/sdcard/Download/jie");
+        if(!d.exists()) {
+            d.mkdirs();
+        }
         mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "avc-%03d.mp4",
-                960, 544, 1500, 5000);
+                960, 544, 1500, 10000);
 //        mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "hevc_1088p_2000kb-%03d.mp4",
 //                1920, 1088, 2000, 100000);
         mediaRecode.setRecodeEventListener(new AVRecodeInterface.onRecodeEventListener() {

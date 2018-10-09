@@ -50,6 +50,7 @@ namespace av{
             return ret;
         m_video_codecParam = m_inputFormat->video_codecParam;
         m_audio_codecParam = m_inputFormat->audio_codecParam;
+        m_stream_info = m_inputFormat->stream_info;
 
         m_audioStream.reset(new AVDemuxer());
         ret = m_audioStream->openInputFormat(m_input.c_str());

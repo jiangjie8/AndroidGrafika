@@ -65,6 +65,7 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
             }
         }
     }
+    LOGW("input  %s\n", input);
     for (auto &info : paddingInfo) {
         LOGW("%s   start %8lld ; end %8lld\n", info.second.streamType == VStreamType::SMALL ? "small" : "large",
             info.second.start_pts, info.second.end_pts);

@@ -25,8 +25,7 @@ namespace av{
     const AVCodecParameters* AVDemuxer::getCodecParameters(enum AVMediaType type){
         if (m_inputFormat == nullptr)
             return nullptr;
-        stream_info.duration = m_inputFormat->duration;
-        stream_info.bitrate = m_inputFormat->bit_rate;
+
         for (int i = 0; i < m_inputFormat->nb_streams; i++) {
             AVStream *stream = m_inputFormat->streams[i];
             AVMediaType mediaType = stream->codecpar->codec_type;
@@ -61,7 +60,8 @@ namespace av{
     int AVDemuxer::getMediaInfo() {
         if (m_inputFormat == nullptr)
             return -1;
-
+        stream_info.duration = m_inputFormat->duration;
+        stream_info.bitrate = m_inputFormat->bit_rate;
         for (int i = 0; i < m_inputFormat->nb_streams; i++) {
             AVStream *stream = m_inputFormat->streams[i];
             AVMediaType mediaType = stream->codecpar->codec_type;
