@@ -101,15 +101,16 @@ int MergerCtx::openInputStreams(const char *file1, const char *file2)
         m_vStream2.reset();
         return -1;
     }
-    return 0;
+    return ret;
 }
 
 int MergerCtx::openOutputFile(const char *file) 
 {
+    int ret = 0;
     m_output.reset(new AVMuxer());
-    if (m_output->openOutputFormat(file) < 0)
+    if (( ret = m_output->openOutputFormat(file)) < 0)
         m_output.reset();
-    return 0;
+    return ret;
 }
 
 int MergerCtx::cfgCodec()
@@ -124,8 +125,11 @@ int MergerCtx::cfgCodec()
         auto decode_dst = m_decodeV1->getCodecContext();
         decode_dst->time_base = decode_src->time_base;
         decode_dst->ticks_per_frame = decode_src->ticks_per_frame;
-        if ((ret = m_decodeV1->openCodec()) < 0)
+        if ((ret = m_decodeV1->openCodec()) < 0) {
             m_decodeV1.reset();
+            return ret;
+        }
+            
     }
 
     param = m_vStream2->getCodecParameters(AVMEDIA_TYPE_VIDEO);
@@ -136,8 +140,10 @@ int MergerCtx::cfgCodec()
         auto decode_dst = m_decodeV2->getCodecContext();
         decode_dst->time_base = decode_src->time_base;
         decode_dst->ticks_per_frame = decode_src->ticks_per_frame;
-        if ((ret = m_decodeV2->openCodec()) < 0)
+        if ((ret = m_decodeV2->openCodec()) < 0) {
             m_decodeV2.reset();
+            return ret;
+        }
     }
 
     if (m_decodeV1 && m_decodeV2) {
@@ -158,6 +164,8 @@ int MergerCtx::cfgCodec()
         if ((ret = m_encodeV->openCodec(&options)) < 0)
             m_encodeV.reset();
         av_dict_free(&options);
+        if (ret < 0)
+            return ret;
 
         m_filterGraph.reset(new FilterGraph());
         char filter_spec[512] = { 0 };
@@ -308,9 +316,13 @@ int MergerCtx::mergerLoop() {
                 if (ret < 0 || vframe2->pts >= vframe1->pts)
                     break;
             }
+            if (vframe2->pict_type != AV_PICTURE_TYPE_I) {
+                vframe2->pict_type = AV_PICTURE_TYPE_NONE;
+            }
             frame.reset(vframe2.release());
         }
         else {
+            vframe1->pict_type = AV_PICTURE_TYPE_NONE;
             frame.reset(vframe1.release());
         }
         if (ret < 0)
@@ -356,14 +368,14 @@ int MergerCtx::mergerLoop() {
 
     if (m_aStream1)
         writeAudioPacket(m_aStream1.get(), m_output.get(), AV_NOPTS_VALUE, m_audioIndex);
-    m_output->closeOutputForamt();
-    return 0;
+    ret = m_output->closeOutputForamt();
+    return ret;
 }
 
 int MergerCtx::encodeWriteFrame(AVEncoder *encoder, AVFrame *frame) {
     int ret = 0;
     std::unique_ptr<AVPacket, AVPacketDeleter> vpacket(av_packet_alloc());
-    frame->pict_type = AV_PICTURE_TYPE_NONE;
+    //frame->pict_type = AV_PICTURE_TYPE_NONE;
     vp_frame_rescale_ts(frame, { 1, AV_TIME_BASE }, encoder->getCodecContext()->time_base);
     ret = encoder->sendFrame(frame);
     ret = encoder->receivPacket(vpacket.get());
@@ -386,6 +398,7 @@ int MergerCtx::encodeWriteFrame(AVEncoder *encoder, AVFrame *frame) {
 
 using namespace av;
 int main(int argc, char *argv[]) {
+    int ret = 0;
     if (parser_option(argc, argv) < 0) {
         LOGE("command : ");
         for (int i = 0; i < argc; ++i) {
@@ -398,11 +411,11 @@ int main(int argc, char *argv[]) {
     const char *in1 = command_t.input1.c_str();
     const char *in2 = command_t.input2.c_str();
     MergerCtx ctx;
-    ctx.openInputStreams(in1, in2);
-    ctx.openOutputFile(command_t.output.c_str());
-    ctx.cfgCodec();
-    ctx.mergerLoop();
-    return 0;
-   
-
+    if ((ret = ctx.openInputStreams(in1, in2)) < 0)
+        return ret;
+    if ((ret = ctx.openOutputFile(command_t.output.c_str())) < 0)
+        return ret;
+    if ((ret = ctx.cfgCodec()) < 0)
+        return ret;
+    return ctx.mergerLoop();
 }

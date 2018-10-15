@@ -28,10 +28,12 @@ public:
     int writeHeader();
     int writePacket(AVPacket *packet);
 
-    void closeOutputForamt(){
+    int closeOutputForamt(){
+        int ret = 0;
         if(m_outputFormat)
-            av_write_trailer(m_outputFormat.get());
+            ret = av_write_trailer(m_outputFormat.get());
         m_outputFormat.reset();
+        return ret;
     }
     const AVOutputFormat *getOutputFormat() {
         return m_outputFormat->oformat;

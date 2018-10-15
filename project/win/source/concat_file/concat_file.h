@@ -103,7 +103,7 @@ static void print_help() {
     printf("Usage: \n"
         "  [-h                                  printf help info]\n"
         "  [--input1    input1.mp4              input file name]\n"
-        "  [--input1    input2.mp4              input file name]\n"
+        "  [--input2    input2.mp4              input file name]\n"
         "  [--output    output.mp4              output file name]\n"
         "  [--cv        crf=22:aq-mode=1        output file name]\n"
     );
