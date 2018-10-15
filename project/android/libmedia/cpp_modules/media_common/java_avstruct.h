@@ -83,4 +83,8 @@ int J4A_MediaInfo_setFiled_sampleRate(JNIEnv *env, jobject object, int sampleRat
 int J4A_MediaInfo_setFiled_sampleDepth(JNIEnv *env, jobject object, int sampleDepth);
 int J4A_MediaInfo_setFiled_frameSize(JNIEnv *env, jobject object, int frameSize);
 
+int J4A_MediaInfo_getFiled_videoCodecID(JNIEnv *env, jobject object);
+int J4A_MediaInfo_getFiled_width(JNIEnv *env, jobject object);
+int J4A_MediaInfo_getFiled_height(JNIEnv *env, jobject object);
+
 #endif //ANDROIDGRAFIKA_JAVA_AVSTRUCT_H

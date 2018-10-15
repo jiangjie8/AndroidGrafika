@@ -50,8 +50,8 @@ public:
         m_audioStream.reset();
         return 0;
     }
-    int getMediaInfo(JNIEnv *env, jobject object);
-    int openOutputFormat(JNIEnv *env, const char *outputStr, int codecID);
+    int getMediaInfo(JNIEnv *env, jobject mediaInfo);
+    int openOutputFormat(JNIEnv *env, const char *outputStr, jobject mediaInfo);
     //delete this object after closeOutputFormat
     int closeOutputFormat();
 

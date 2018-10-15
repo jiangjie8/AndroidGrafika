@@ -98,10 +98,17 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
             format.setInteger(MediaFormat.KEY_BIT_RATE, targetBitrateBps);
             format.setInteger(MediaFormat.KEY_FRAME_RATE, targetFps);
             format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, FRAME_INTERVAL);
-
             format.setInteger(MediaFormat.KEY_BITRATE_MODE, VIDEO_ControlRateConstant);
-            format.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline);
-            format.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel3);
+
+            if(mime.equals(MediaFormat.MIMETYPE_VIDEO_AVC)){
+                format.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline);
+                format.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel3);
+            }
+            else if(mime.equals(MediaFormat.MIMETYPE_VIDEO_HEVC)){
+                format.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.HEVCProfileMain);
+                format.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.HEVCMainTierLevel31);
+            }
+
 
             mediaCodec = createEncoderByType(mime);
             if (mediaCodec == null) {

@@ -18,7 +18,7 @@ namespace av{
         m_inputFormat.reset(ifmt_ctx); ifmt_ctx = nullptr;
         getMediaInfo();
         
-        //av_dump_format(m_inputFormat.get(), -1, inputStr, 0);
+        av_dump_format(m_inputFormat.get(), -1, inputStr, 0);
         return ret;
     }
 

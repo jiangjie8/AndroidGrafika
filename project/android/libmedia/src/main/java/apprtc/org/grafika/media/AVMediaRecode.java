@@ -292,7 +292,11 @@ public class AVMediaRecode implements AVRecodeInterface {
         if(ptsMs >= end){
             String output = String.format(clipDirectory + clipPrefix, clipIndex);
             Logging.w(TAG, "new output " + output);
-            JNIBridge.native_demuxer_openOutputFormat(mEngineHandleDemuxer, output, EncoderID);
+            MediaInfo mediaInfo = new MediaInfo();
+            mediaInfo.videoCodecID = EncoderID;
+            mediaInfo.width = clipWidth;
+            mediaInfo.height = clipHeight;
+            JNIBridge.native_demuxer_openOutputFormat(mEngineHandleDemuxer, output, mediaInfo);
             if(mVideoDecoder != null){
                 if(!initVideoEncoder(EncoderID, clipWidth, clipHeight, clipBitrate,
                         mMediaInfo.framerate, rootEglBase.getEglBaseContext())){

@@ -64,7 +64,7 @@ public class JNIBridge {
     public static native long native_demuxer_createEngine();
     public static native int native_demuxer_openInputFormat(long engineHandle, String inputStr);
     public static native int native_demuxer_closeInputFormat(long engineHandle);
-    public static native int native_demuxer_openOutputFormat(long engineHandle, String inputStr, int codecID);
+    public static native int native_demuxer_openOutputFormat(long engineHandle, String inputStr, AVStruct.MediaInfo mediaInfo);
     public static native int native_demuxer_closeOutputFormat(long engineHandle);
     public static native int native_demuxer_readPacket(long engineHandle, AVStruct.AVPacket packet);
     public static native int native_demuxer_writePacket(long engineHandle, AVStruct.AVPacket packet);

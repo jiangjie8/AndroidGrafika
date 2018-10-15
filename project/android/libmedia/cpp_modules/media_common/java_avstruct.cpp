@@ -338,3 +338,13 @@ int J4A_MediaInfo_setFiled_frameSize(JNIEnv *env, jobject object, int frameSize)
     env->SetIntField(object, java_class_MediaInfo.filed_frameSize, frameSize);
     return 0;
 }
+
+int J4A_MediaInfo_getFiled_videoCodecID(JNIEnv *env, jobject object){
+    return env->GetIntField(object, java_class_MediaInfo.filed_videoCodecID);
+}
+int J4A_MediaInfo_getFiled_width(JNIEnv *env, jobject object){
+    return env->GetIntField(object, java_class_MediaInfo.filed_width);
+}
+int J4A_MediaInfo_getFiled_height(JNIEnv *env, jobject object){
+    return env->GetIntField(object, java_class_MediaInfo.filed_height);
+}

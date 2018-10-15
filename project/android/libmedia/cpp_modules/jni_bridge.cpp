@@ -112,10 +112,10 @@ JNIEXPORT jint JNICALL demuxer_openInputFormat(JNIEnv *env, jclass clazz, jlong 
 }
 
 
-JNIEXPORT jint JNICALL demuxer_openOutputFormat(JNIEnv *env, jclass clazz, jlong engineHandle, jstring outputStr, jint codecID) {
+JNIEXPORT jint JNICALL demuxer_openOutputFormat(JNIEnv *env, jclass clazz, jlong engineHandle, jstring outputStr, jobject mediaInfo) {
     const char *c_name = env->GetStringUTFChars(outputStr, 0);
     av::FFRecoder *engine = reinterpret_cast<av::FFRecoder*>(engineHandle);
-    int ret = engine->openOutputFormat(env, c_name, codecID);
+    int ret = engine->openOutputFormat(env, c_name, mediaInfo);
     if(c_name)
         env->ReleaseStringUTFChars(outputStr, c_name);
     return ret;
@@ -137,9 +137,9 @@ JNIEXPORT jint JNICALL demuxer_writePacket(JNIEnv *env, jclass clazz, jlong engi
 }
 
 
-JNIEXPORT jint JNICALL demuxer_getMediaInfo(JNIEnv *env, jclass clazz, jlong engineHandle, jobject packet) {
+JNIEXPORT jint JNICALL demuxer_getMediaInfo(JNIEnv *env, jclass clazz, jlong engineHandle, jobject mediaInfo) {
     av::FFRecoder *engine = reinterpret_cast<av::FFRecoder*>(engineHandle);
-    return engine->getMediaInfo(env, packet);
+    return engine->getMediaInfo(env, mediaInfo);
 }
 
 
@@ -164,7 +164,7 @@ static JNINativeMethod g_methods[] = {
         {"native_demuxer_createEngine",                 "()J",  (void *) demuxer_createEngine},
         {"native_demuxer_openInputFormat",              "(JLjava/lang/String;)I",   (void *) demuxer_openInputFormat},
         {"native_demuxer_closeInputFormat",              "(J)I",   (void *) demuxer_closeInputFormat},
-        {"native_demuxer_openOutputFormat",              "(JLjava/lang/String;I)I",   (void *) demuxer_openOutputFormat},
+        {"native_demuxer_openOutputFormat",              "(JLjava/lang/String;Lapprtc/org/grafika/media/AVStruct$MediaInfo;)I",   (void *) demuxer_openOutputFormat},
         {"native_demuxer_closeOutputFormat",              "(J)I",   (void *) demuxer_closeOutputFormat},
         {"native_demuxer_readPacket",                   "(JLapprtc/org/grafika/media/AVStruct$AVPacket;)I",   (void *) demuxer_readPacket},
         {"native_demuxer_writePacket",                  "(JLapprtc/org/grafika/media/AVStruct$AVPacket;)I",   (void *) demuxer_writePacket},

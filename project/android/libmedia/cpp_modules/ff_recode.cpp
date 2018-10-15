@@ -2,6 +2,40 @@
 #include "ff_recode.h"
 
 namespace av{
+    static void av_log_default_callback(void* ptr, int level, const char* fmt, va_list vl) {
+        if(level > av_log_get_level())
+            return;
+        char buffer[1024] = {0};
+        switch(level){
+            case AV_LOG_PANIC:{}
+            case AV_LOG_FATAL:{}
+            case AV_LOG_ERROR:{
+                vsnprintf(buffer, sizeof(buffer) -1, fmt, vl);
+                J4A_ALOGE("%s", buffer);
+                break;
+            }
+            case AV_LOG_WARNING:{
+                vsnprintf(buffer, sizeof(buffer) -1, fmt, vl);
+                J4A_ALOGW("%s", buffer);
+                break;
+            }
+            case AV_LOG_INFO:{
+                vsnprintf(buffer, sizeof(buffer) -1, fmt, vl);
+                J4A_ALOGI("%s", buffer);
+                break;
+            }
+            case AV_LOG_DEBUG:{
+                vsnprintf(buffer, sizeof(buffer) -1, fmt, vl);
+                J4A_ALOGD("%s", buffer);
+                break;
+            }
+            default:{
+                vsnprintf(buffer, sizeof(buffer) -1, fmt, vl);
+                J4A_ALOGV("%s", buffer);
+                break;
+            }
+        }
+    }
     constexpr int AUDIO_BITRATE = 48 * 1024;
     static void initOnce(JNIEnv *env){
         static bool init = false;
@@ -9,6 +43,7 @@ namespace av{
             init = true;
             J4A_AVPacket_Class_Init(env);
             J4A_MediaInfo_Class_Init(env);
+            av_log_set_callback(av_log_default_callback);
         }
     }
 
@@ -84,36 +119,36 @@ namespace av{
     }
 
 
-    int FFRecoder::getMediaInfo(JNIEnv *env, jobject object) {
+    int FFRecoder::getMediaInfo(JNIEnv *env, jobject mediaInfo) {
 
-        J4A_MediaInfo_setFiled_bitrate(env, object, m_stream_info.bitrate);
-        J4A_MediaInfo_setFiled_duration(env, object, m_stream_info.duration);
-        J4A_MediaInfo_setFiled_startTime(env, object, m_stream_info.start_time);
+        J4A_MediaInfo_setFiled_bitrate(env, mediaInfo, m_stream_info.bitrate);
+        J4A_MediaInfo_setFiled_duration(env, mediaInfo, m_stream_info.duration);
+        J4A_MediaInfo_setFiled_startTime(env, mediaInfo, m_stream_info.start_time);
         if(m_video_codecParam.width > 0 &&
            m_video_codecParam.height > 0){
-            J4A_MediaInfo_setFiled_videoCodecID(env, object, m_video_codecParam.codec_id);
-            J4A_MediaInfo_setFiled_width(env, object, m_video_codecParam.width);
-            J4A_MediaInfo_setFiled_height(env, object, m_video_codecParam.height);
+            J4A_MediaInfo_setFiled_videoCodecID(env, mediaInfo, m_video_codecParam.codec_id);
+            J4A_MediaInfo_setFiled_width(env, mediaInfo, m_video_codecParam.width);
+            J4A_MediaInfo_setFiled_height(env, mediaInfo, m_video_codecParam.height);
             int framerate = 25;
             if(m_video_codecParam.frame_rate_num > 0 && m_video_codecParam.frame_rate_den > 0){
                 framerate = m_video_codecParam.frame_rate_num/m_video_codecParam.frame_rate_den;
             }
-            J4A_MediaInfo_setFiled_framerate(env, object, framerate);
+            J4A_MediaInfo_setFiled_framerate(env, mediaInfo, framerate);
         }
 
         if(m_audio_codecParam.sample_rate > 0 &&
            m_audio_codecParam.channels > 0){
-            J4A_MediaInfo_setFiled_audioCodecID(env, object, m_audio_codecParam.codec_id);
-            J4A_MediaInfo_setFiled_channels(env, object, m_audio_codecParam.channels);
-            J4A_MediaInfo_setFiled_sampleRate(env, object, m_audio_codecParam.sample_rate);
-            J4A_MediaInfo_setFiled_sampleDepth(env, object, m_audio_codecParam.sample_depth);
-            J4A_MediaInfo_setFiled_frameSize(env, object, m_audio_codecParam.frame_size);
+            J4A_MediaInfo_setFiled_audioCodecID(env, mediaInfo, m_audio_codecParam.codec_id);
+            J4A_MediaInfo_setFiled_channels(env, mediaInfo, m_audio_codecParam.channels);
+            J4A_MediaInfo_setFiled_sampleRate(env, mediaInfo, m_audio_codecParam.sample_rate);
+            J4A_MediaInfo_setFiled_sampleDepth(env, mediaInfo, m_audio_codecParam.sample_depth);
+            J4A_MediaInfo_setFiled_frameSize(env, mediaInfo, m_audio_codecParam.frame_size);
         }
         return 0;
     }
 
 
-    int FFRecoder::openOutputFormat(JNIEnv *env, const char *outputStr, int videoCodecID){
+    int FFRecoder::openOutputFormat(JNIEnv *env, const char *outputStr, jobject mediaInfo){
         int ret = 0;
         m_timestamp_start = AV_NOPTS_VALUE;
         m_muxer.reset(new AVMuxer());
@@ -124,10 +159,10 @@ namespace av{
             const AVCodecParameters *src_codecpar = m_inputFormat->getCodecParameters(AVMEDIA_TYPE_VIDEO);
             AVCodecParameters *codecpar =  avcodec_parameters_alloc();
             codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
-            codecpar->width = src_codecpar->width;
-            codecpar->height = src_codecpar->height;
+            codecpar->width = J4A_MediaInfo_getFiled_width(env, mediaInfo);
+            codecpar->height = J4A_MediaInfo_getFiled_height(env, mediaInfo);
             codecpar->sample_aspect_ratio = src_codecpar->sample_aspect_ratio;
-            codecpar->codec_id = (enum AVCodecID)videoCodecID;
+            codecpar->codec_id = (enum AVCodecID)J4A_MediaInfo_getFiled_videoCodecID(env, mediaInfo);
             codecpar->format = AV_PIX_FMT_YUV420P;
             v_index = m_muxer->addStream(codecpar);
             avcodec_parameters_free(&codecpar);
