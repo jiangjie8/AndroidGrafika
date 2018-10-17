@@ -17,7 +17,7 @@ elseif(UNIX)
     add_definitions(-DLinux)
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -Wl,--no-as-needed  -ldl -m64  -pthread")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -Wl,--no-as-needed  -ldl -lz -m64  -pthread")
     set(SYSTEM_PLATFORM "linux")
 endif()
 

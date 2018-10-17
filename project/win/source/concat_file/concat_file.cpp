@@ -313,8 +313,14 @@ int MergerCtx::mergerLoop() {
             std::unique_ptr<AVFrame, AVFrameDeleter> vframe2(av_frame_alloc());
             while (true) {
                 ret = getVideoFrame(m_vStream2.get(), m_decodeV2.get(), vframe2.get());
-                if (ret < 0 || vframe2->pts >= vframe1->pts)
+                if (ret == AVERROR_EOF) {
+                    ret = 0;
+                    vframe2.reset(vframe1.release());
                     break;
+                }
+                else if (ret < 0 || vframe2->pts >= vframe1->pts) {
+                    break;
+                } 
             }
             if (vframe2->pict_type != AV_PICTURE_TYPE_I) {
                 vframe2->pict_type = AV_PICTURE_TYPE_NONE;
@@ -325,6 +331,8 @@ int MergerCtx::mergerLoop() {
             vframe1->pict_type = AV_PICTURE_TYPE_NONE;
             frame.reset(vframe1.release());
         }
+
+
         if (ret < 0)
             break;
         if (frame->pts <= last_one_pts) {
