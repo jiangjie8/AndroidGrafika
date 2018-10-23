@@ -65,7 +65,7 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
             }
         }
     }
-    LOGW("input  %s\n", input);
+    LOGW("===== input  %s =====\n", input);
     for (auto &info : paddingInfo) {
         LOGW("%s   start %8lld ; end %8lld\n", info.second.streamType == VStreamType::SMALL ? "small" : "large",
             info.second.start_pts, info.second.end_pts);
@@ -170,7 +170,8 @@ int MergerCtx::cfgCodec()
         m_filterGraph.reset(new FilterGraph());
         char filter_spec[512] = { 0 };
         snprintf(filter_spec, sizeof(filter_spec) - 1,
-            "[in]scale=w=%d:h=%d:flags=%d[out]",
+            "[in]drawtext=text='%s':x=w/2-100:y=0:fontcolor=red:fontsize=25,scale=w=%d:h=%d:flags=%d[out]",
+            "Small Video",
             encode_param->width, encode_param->height,
             SWS_FAST_BILINEAR);
         ret = m_filterGraph->initFilter(m_decodeV1->getCodecContext(), m_encodeV->getCodecContext(), filter_spec);
@@ -315,7 +316,7 @@ int MergerCtx::mergerLoop() {
                 ret = getVideoFrame(m_vStream2.get(), m_decodeV2.get(), vframe2.get());
                 if (ret == AVERROR_EOF) {
                     ret = 0;
-                    vframe2.reset(vframe1.release());
+                    use2 = false;
                     break;
                 }
                 else if (ret < 0 || vframe2->pts >= vframe1->pts) {
@@ -327,7 +328,7 @@ int MergerCtx::mergerLoop() {
             }
             frame.reset(vframe2.release());
         }
-        else {
+        if(!use2){
             vframe1->pict_type = AV_PICTURE_TYPE_NONE;
             frame.reset(vframe1.release());
         }

@@ -179,12 +179,15 @@ namespace av{
             m_muxer->setExternalData(m_spspps_buffer, m_spspps_buffer_size, v_index);
         }
         ret = m_muxer->writeHeader();
+        if(ret < 0)
+            m_muxer.reset();
         return ret;
 
     }
 
     int FFRecoder::closeOutputFormat(){
-        m_muxer->closeOutputForamt();
+        if(m_muxer)
+            m_muxer->closeOutputForamt();
         m_muxer.reset();
         return 0;
     }

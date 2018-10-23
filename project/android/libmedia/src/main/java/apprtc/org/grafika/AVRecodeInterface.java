@@ -15,7 +15,7 @@ public interface AVRecodeInterface {
     public void setRecodeEventListener(onRecodeEventListener listener, Handler handler);
     public void starRecode();
     public void stopRecode();
-
+    public void waitRecode();
 
     public interface onRecodeEventListener {
         void onPrintReport(final String message);

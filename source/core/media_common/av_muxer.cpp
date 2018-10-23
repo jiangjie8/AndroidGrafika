@@ -48,8 +48,8 @@ namespace av {
         if (!(ofmt_ctx->flags & AVFMT_NOFILE)) {
             ret = avio_open(&ofmt_ctx->pb, m_output.c_str(), AVIO_FLAG_WRITE);
             if (ret < 0) {
-                LOGE("Could not open output file '%s'", m_output.c_str());
-                return -1;
+                LOGE("Could not open output file '%s'  ret %d", m_output.c_str(), ret);
+                return ret;
             }
         }
         ret = avformat_write_header(ofmt_ctx, NULL);
