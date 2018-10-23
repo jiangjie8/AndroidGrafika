@@ -170,8 +170,8 @@ int MergerCtx::cfgCodec()
         m_filterGraph.reset(new FilterGraph());
         char filter_spec[512] = { 0 };
         snprintf(filter_spec, sizeof(filter_spec) - 1,
-            "[in]drawtext=text='%s':x=w/2-100:y=0:fontcolor=red:fontsize=25,scale=w=%d:h=%d:flags=%d[out]",
-            "Small Video",
+            "movie=%s[wm];[in][wm]overlay=0:0[logo];[logo]scale=w=%d:h=%d:flags=%d[out]",
+            "smallFlag.png",
             encode_param->width, encode_param->height,
             SWS_FAST_BILINEAR);
         ret = m_filterGraph->initFilter(m_decodeV1->getCodecContext(), m_encodeV->getCodecContext(), filter_spec);
