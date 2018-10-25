@@ -287,12 +287,12 @@ public class AVMediaRecode implements AVRecodeInterface {
         long end = (clipIndex + 1) * clipDurationMs + TimeUnit.MICROSECONDS.toMillis(mMediaInfo.startTime);
 
         long leftDuration = TimeUnit.MICROSECONDS.toMillis(mMediaInfo.duration) - end;
-        if(ptsMs >= end && ptsMs != Long.MAX_VALUE && leftDuration >= 3000){
+        if((ptsMs >= end && leftDuration >= 3000) && ptsMs != Long.MAX_VALUE){
             clipIndex++;
             flushEncoder();
         }
 
-        if(ptsMs >= end && leftDuration >= 3000){
+        if((ptsMs >= end && leftDuration >= 3000) || ptsMs == Long.MAX_VALUE){
             String output = String.format(clipDirectory + clipPrefix, clipIndex);
             Logging.w(TAG, "new output " + output);
             MediaInfo mediaInfo = new MediaInfo();
@@ -442,7 +442,7 @@ public class AVMediaRecode implements AVRecodeInterface {
     @Override
     public void waitRecode() {
         try {
-            mHandler.getLooper().getThread().join(1);
+            mHandler.getLooper().getThread().join();
         } catch (InterruptedException e) {
             Logging.e(TAG, "wait error " + e.toString());
         }
