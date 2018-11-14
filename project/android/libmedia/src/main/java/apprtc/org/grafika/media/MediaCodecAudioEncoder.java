@@ -3,7 +3,6 @@ package apprtc.org.grafika.media;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
-import android.util.Log;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -66,7 +65,7 @@ public class MediaCodecAudioEncoder implements AVMediaCodec{
             return MediaCodec.createEncoderByType(codecName);
         } catch (IOException e) {
 //            e.printStackTrace();
-            Log.e(TAG,e.getMessage());
+            Logging.e(TAG,e.getMessage());
             return null;
         }
     }
@@ -143,7 +142,7 @@ public class MediaCodecAudioEncoder implements AVMediaCodec{
     public boolean sendFrame(ByteBuffer buffer, int size, long presentationTimeStamUs) {
         int index = dequeueInputBuffer();
         if(index < 0){
-            Log.w(TAG, "dequeue audio InputBuffer error " + index + " drop frame " + droppedFrames++);
+            Logging.w(TAG, "dequeue audio InputBuffer error " + index + " drop frame " + droppedFrames++);
             return false;
         }
         return  encodeBuffer(index, buffer, size, presentationTimeStamUs);

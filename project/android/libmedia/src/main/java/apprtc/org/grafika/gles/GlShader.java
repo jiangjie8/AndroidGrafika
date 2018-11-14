@@ -11,9 +11,10 @@
 package apprtc.org.grafika.gles;
 
 import android.opengl.GLES20;
-import android.util.Log;
 
 import java.nio.FloatBuffer;
+
+import apprtc.org.grafika.Logging;
 
 // Helper class for handling OpenGL shaders and shader programs.
 public class GlShader {
@@ -29,7 +30,7 @@ public class GlShader {
     int[] compileStatus = new int[] {GLES20.GL_FALSE};
     GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, compileStatus, 0);
     if (compileStatus[0] != GLES20.GL_TRUE) {
-      Log.e(
+      Logging.e(
           TAG, "Could not compile shader " + shaderType + ":" + GLES20.glGetShaderInfoLog(shader));
       throw new RuntimeException(GLES20.glGetShaderInfoLog(shader));
     }
@@ -52,7 +53,7 @@ public class GlShader {
     int[] linkStatus = new int[] {GLES20.GL_FALSE};
     GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linkStatus, 0);
     if (linkStatus[0] != GLES20.GL_TRUE) {
-      Log.e(TAG, "Could not link program: " + GLES20.glGetProgramInfoLog(program));
+      Logging.e(TAG, "Could not link program: " + GLES20.glGetProgramInfoLog(program));
       throw new RuntimeException(GLES20.glGetProgramInfoLog(program));
     }
     // According to the documentation of glLinkProgram():
@@ -120,7 +121,7 @@ public class GlShader {
   }
 
   public void release() {
-    Log.d(TAG, "Deleting shader.");
+    Logging.d(TAG, "Deleting shader.");
     // Delete program, automatically detaching any shaders from it.
     if (program != -1) {
       GLES20.glDeleteProgram(program);

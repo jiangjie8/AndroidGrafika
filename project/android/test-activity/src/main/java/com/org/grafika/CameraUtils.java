@@ -17,9 +17,10 @@
 package com.org.grafika;
 
 import android.hardware.Camera;
-import android.util.Log;
 
 import java.util.List;
+
+import apprtc.org.grafika.Logging;
 
 /**
  * Camera-related utility functions.
@@ -40,7 +41,7 @@ public class CameraUtils {
         // size, and has the same aspect ratio.
         Camera.Size ppsfv = parms.getPreferredPreviewSizeForVideo();
         if (ppsfv != null) {
-            Log.d(TAG, "Camera preferred preview size for video is " +
+            Logging.d(TAG, "Camera preferred preview size for video is " +
                     ppsfv.width + "x" + ppsfv.height);
         }
 
@@ -55,7 +56,7 @@ public class CameraUtils {
             }
         }
 
-        Log.w(TAG, "Unable to set preview size to " + width + "x" + height);
+        Logging.w(TAG, "Unable to set preview size to " + width + "x" + height);
         if (ppsfv != null) {
             parms.setPreviewSize(ppsfv.width, ppsfv.height);
         }
@@ -91,7 +92,7 @@ public class CameraUtils {
             guess = tmp[1] / 2;     // shrug
         }
 
-        Log.d(TAG, "Couldn't find match for " + desiredThousandFps + ", using " + guess);
+        Logging.d(TAG, "Couldn't find match for " + desiredThousandFps + ", using " + guess);
         return guess;
     }
 }

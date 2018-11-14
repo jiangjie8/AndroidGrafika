@@ -8,7 +8,6 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -18,6 +17,7 @@ import android.view.WindowManager;
 
 import java.io.IOException;
 
+import apprtc.org.grafika.Logging;
 import apprtc.org.grafika.gles.EglBase;
 import apprtc.org.grafika.gles.EglBase14;
 import apprtc.org.grafika.gles.GlRectDrawer;
@@ -74,12 +74,12 @@ public class ViewsActivity extends AppCompatActivity implements SurfaceTexture.O
                         mRectDraw_TextureView = new GlRectDrawer();
                     }
                 });
-                Log.w(TAG, "onSurfaceTextureAvailable ");
+                Logging.w(TAG, "onSurfaceTextureAvailable ");
             }
 
             @Override
             public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-                Log.w(TAG, "onSurfaceTextureSizeChanged   size=" + width + "x" + height);
+                Logging.w(TAG, "onSurfaceTextureSizeChanged   size=" + width + "x" + height);
             }
 
             @Override
@@ -97,7 +97,7 @@ public class ViewsActivity extends AppCompatActivity implements SurfaceTexture.O
                         }
                     }
                 });
-                Log.w(TAG, "onSurfaceTextureDestroyed, thread ID " + Thread.currentThread().getId());
+                Logging.w(TAG, "onSurfaceTextureDestroyed, thread ID " + Thread.currentThread().getId());
                 return true;
             }
 
@@ -122,13 +122,13 @@ public class ViewsActivity extends AppCompatActivity implements SurfaceTexture.O
                         mRectDraw_SurfaceView = new GlRectDrawer();
                     }
                 });
-                Log.w(TAG, "surfaceCreated ");
+                Logging.w(TAG, "surfaceCreated ");
             }
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
 
-                Log.w(TAG, "surfaceChanged fmt=" + format + " size=" + width + "x" + height);
+                Logging.w(TAG, "surfaceChanged fmt=" + format + " size=" + width + "x" + height);
             }
 
             @Override
@@ -146,10 +146,10 @@ public class ViewsActivity extends AppCompatActivity implements SurfaceTexture.O
                         }
                     }
                 });
-                Log.w(TAG, "surfaceDestroyed, thread ID " + Thread.currentThread().getId());
+                Logging.w(TAG, "surfaceDestroyed, thread ID " + Thread.currentThread().getId());
             }
         });
-        Log.w(TAG, "onCreate, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onCreate, thread ID " + Thread.currentThread().getId());
     }
     @Override
     public void onFrameAvailable(SurfaceTexture surfaceTexture)
@@ -244,7 +244,7 @@ public class ViewsActivity extends AppCompatActivity implements SurfaceTexture.O
             }
         }
         if(mCamera == null){
-            Log.e(TAG, "No front-facing camera found; opening default");
+            Logging.e(TAG, "No front-facing camera found; opening default");
             mCamera = Camera.open();
         }
         if(mCamera == null){
@@ -266,7 +266,7 @@ public class ViewsActivity extends AppCompatActivity implements SurfaceTexture.O
         else{
             previewFacts += " @[" + (fpsRange[0] / 1000.0) + " - " + (fpsRange[1] / 1000.0) + "] fps";
         }
-        Log.w(TAG, previewFacts);
+        Logging.w(TAG, previewFacts);
 
         mCameraPreviewWidth = mCameraPreviewSize.width;
         mCameraPreviewHeight = mCameraPreviewSize.height;
@@ -294,33 +294,33 @@ public class ViewsActivity extends AppCompatActivity implements SurfaceTexture.O
     @Override
     protected void onStart() {
         super.onStart();
-        Log.w(TAG, "onStart, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onStart, thread ID " + Thread.currentThread().getId());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         startCameraCapture();
-        Log.w(TAG, "onResume, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onResume, thread ID " + Thread.currentThread().getId());
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Log.w(TAG, "onPause, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onPause, thread ID " + Thread.currentThread().getId());
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        Log.w(TAG, "onStop, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onStop, thread ID " + Thread.currentThread().getId());
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         stopCameraCapture();
-        Log.w(TAG, "onDestroy, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onDestroy, thread ID " + Thread.currentThread().getId());
     }
 
 

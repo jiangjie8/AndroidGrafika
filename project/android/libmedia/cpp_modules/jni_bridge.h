@@ -30,7 +30,7 @@ __EXTERN_C_END
 #define ALOGV(fmt, ...)   android_logging_debug_print(J4A_LOG_TAG, fmt, ##__VA_ARGS__)
 #define ALOGD(fmt, ...)   android_logging_debug_print(J4A_LOG_TAG, fmt, ##__VA_ARGS__)
 #define ALOGI(fmt, ...)   android_logging_info_print(J4A_LOG_TAG, fmt, ##__VA_ARGS__)
-#define ALOGW(fmt, ...)   android_logging_warring_print(J4A_LOG_TAG, fmt, ##__VA_ARGS__)
+#define ALOGW(fmt, ...)   android_logging_warning_print(J4A_LOG_TAG, fmt, ##__VA_ARGS__)
 #define ALOGE(fmt, ...)   android_logging_error_print(J4A_LOG_TAG, fmt, ##__VA_ARGS__)
 
 #else

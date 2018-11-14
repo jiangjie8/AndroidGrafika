@@ -38,8 +38,8 @@ int J4A_Logging_Class_Init(JNIEnv *env){
     class_id = java_class_Logging.classId;
     name = "w";
     sign = "(Ljava/lang/String;Ljava/lang/String;)V";
-    java_class_Logging.method_warring = J4A_GetStaticMethodID__catchAll(env, class_id, name, sign);
-    if(java_class_Logging.method_warring == nullptr)
+    java_class_Logging.method_warning = J4A_GetStaticMethodID__catchAll(env, class_id, name, sign);
+    if(java_class_Logging.method_warning == nullptr)
         goto fail;
 
     return 0;
@@ -74,7 +74,7 @@ void J4AC_Logging_debug__withCString__catchAll(JNIEnv *env, const char *tag_cstr
 }
 
 
-void J4AC_Logging_warring__withCString__catchAll(JNIEnv *env, const char *tag_cstr, const char *message_cstr)
+void J4AC_Logging_warning__withCString__catchAll(JNIEnv *env, const char *tag_cstr, const char *message_cstr)
 {
     jstring tag = NULL;
     jstring message = NULL;
@@ -87,7 +87,7 @@ void J4AC_Logging_warring__withCString__catchAll(JNIEnv *env, const char *tag_cs
     if (J4A_ExceptionCheck__catchAll(env) || !message)
         goto fail;
 
-    env->CallStaticVoidMethod(java_class_Logging.classId, java_class_Logging.method_warring, tag, message);
+    env->CallStaticVoidMethod(java_class_Logging.classId, java_class_Logging.method_warning, tag, message);
 
     J4A_ExceptionCheck__catchAll(env);
 
@@ -157,7 +157,7 @@ void android_logging_info_print(const char *tag, const char *fmt, ...){
     J4AC_Logging_debug__withCString__catchAll(env, tag, log_buffer);
 }
 
-void android_logging_warring_print(const char *tag, const char *fmt, ...){
+void android_logging_warning_print(const char *tag, const char *fmt, ...){
 
     JNIEnv *env = NULL;
 
@@ -170,7 +170,7 @@ void android_logging_warring_print(const char *tag, const char *fmt, ...){
     va_start(ap, fmt);
     vsnprintf(log_buffer, LOG_BUF_SIZE, fmt, ap);
     va_end(ap);
-    J4AC_Logging_warring__withCString__catchAll(env, tag, log_buffer);
+    J4AC_Logging_warning__withCString__catchAll(env, tag, log_buffer);
 }
 
 void android_logging_error_print(const char *tag, const char *fmt, ...){

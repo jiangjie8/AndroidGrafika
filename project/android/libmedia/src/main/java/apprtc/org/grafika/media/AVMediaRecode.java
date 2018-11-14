@@ -4,7 +4,6 @@ import android.media.MediaFormat;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
-import android.util.Log;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -142,7 +141,7 @@ public class AVMediaRecode implements AVRecodeInterface {
             return mVideoEncoder.initEncode(mime, width, height, bitrate, fps, (EglBase14.Context) sharedContext);
         }
         else{
-            Log.e(TAG, "unsupport EglBase14");
+            Logging.e(TAG, "unsupport EglBase14");
             return false;
         }
     }
@@ -371,7 +370,7 @@ public class AVMediaRecode implements AVRecodeInterface {
         if(mVideoEncoder != null){ mVideoEncoder.release(); mVideoEncoder = null; }
         if(mSurfaceTextureHelper != null){mSurfaceTextureHelper.dispose();}
         if(rootEglBase != null){rootEglBase.release();}
-        Log.w(TAG, "!!!!!!!!release all source");
+        Logging.w(TAG, "!!!!!!!!release all source");
     }
 
     @Override
@@ -448,10 +447,6 @@ public class AVMediaRecode implements AVRecodeInterface {
         }
     }
 
-    @Override
-    public void setLoggCallback(Logging.LoggingCallback callback) {
-        Logging.setLoggingCallback(callback);
-    }
 
     public class ReportInfo{
         long start_time_ms = Long.MIN_VALUE;

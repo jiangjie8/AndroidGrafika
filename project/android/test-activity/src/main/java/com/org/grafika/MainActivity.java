@@ -3,7 +3,6 @@ package com.org.grafika;
 import android.app.ListActivity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.view.View;
@@ -14,6 +13,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import apprtc.org.grafika.Logging;
 
 
 public class MainActivity extends ListActivity {
@@ -80,7 +81,7 @@ public class MainActivity extends ListActivity {
         if (!PermissionHelper.hasCameraPermission(this)) {
             PermissionHelper.requestCameraPermission(this, false);
         }
-        Log.w(TAG, "onResume, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onResume, thread ID " + Thread.currentThread().getId());
     }
 
     /**

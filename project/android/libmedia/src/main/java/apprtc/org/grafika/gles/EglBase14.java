@@ -19,9 +19,9 @@ import android.opengl.EGLDisplay;
 import android.opengl.EGLExt;
 import android.opengl.EGLSurface;
 import android.os.Build;
-import android.util.Log;
 import android.view.Surface;
 
+import apprtc.org.grafika.Logging;
 import apprtc.org.grafika.Utils.CalledByNative;
 
 /**
@@ -42,7 +42,7 @@ public class EglBase14 implements EglBase {
   // EGL 1.4 is supported from API 17. But EGLExt that is used for setting presentation
   // time stamp on a surface is supported from 18 so we require 18.
   public static boolean isEGL14Supported() {
-    Log.d(TAG,
+    Logging.d(TAG,
         "SDK version: " + CURRENT_SDK_VERSION
             + ". isEGL14Supported: " + (CURRENT_SDK_VERSION >= EGLExt_SDK_VERSION));
     return (CURRENT_SDK_VERSION >= EGLExt_SDK_VERSION);
@@ -82,7 +82,7 @@ public class EglBase14 implements EglBase {
     int[] values = new int[1];
     EGL14.eglQueryContext(eglDisplay, eglContext, EGL14.EGL_CONTEXT_CLIENT_VERSION,
             values, 0);
-    Log.w(TAG, "EGLContext created, client version " + values[0]);
+    Logging.w(TAG, "EGLContext created, client version " + values[0]);
   }
 
   // Create EGLSurface from the Android Surface.

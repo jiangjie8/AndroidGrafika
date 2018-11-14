@@ -4,7 +4,6 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.opengl.GLES20;
-import android.util.Log;
 import android.view.Surface;
 
 import java.io.IOException;
@@ -73,7 +72,7 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
             return MediaCodec.createEncoderByType(codecName);
         } catch (IOException e) {
 //            e.printStackTrace();
-            Log.e(TAG,e.getMessage());
+            Logging.e(TAG,e.getMessage());
             return null;
         }
     }

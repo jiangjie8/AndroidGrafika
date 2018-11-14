@@ -16,7 +16,6 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
 import android.view.TextureView;
@@ -24,6 +23,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import apprtc.org.grafika.JNIBridge;
+import apprtc.org.grafika.Logging;
 import apprtc.org.grafika.gles.EglBase;
 import apprtc.org.grafika.gles.EglBase14;
 import apprtc.org.grafika.gles.GlRectDrawer;
@@ -72,12 +72,12 @@ public class ScreenCaptureActivity extends AppCompatActivity implements SurfaceT
                 mEglBase_view.makeCurrent();
                 mRectDraw = new GlRectDrawer();
 
-                Log.w(TAG, "onSurfaceTextureAvailable, thread ID " + Thread.currentThread().getId() + ", width " + width + ", height " + height);
+                Logging.w(TAG, "onSurfaceTextureAvailable, thread ID " + Thread.currentThread().getId() + ", width " + width + ", height " + height);
             }
 
             @Override
             public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-                Log.w(TAG, "onSurfaceTextureSizeChanged, thread ID " + Thread.currentThread().getId() + ", width " + width + ", height " + height);
+                Logging.w(TAG, "onSurfaceTextureSizeChanged, thread ID " + Thread.currentThread().getId() + ", width " + width + ", height " + height);
             }
 
             @Override
@@ -88,7 +88,7 @@ public class ScreenCaptureActivity extends AppCompatActivity implements SurfaceT
                 }
                 mRectDraw.release();
                 mRectDraw = null;
-                Log.w(TAG, "onSurfaceTextureDestroyed, thread ID " + Thread.currentThread().getId());
+                Logging.w(TAG, "onSurfaceTextureDestroyed, thread ID " + Thread.currentThread().getId());
                 return true;
             }
 
@@ -97,7 +97,7 @@ public class ScreenCaptureActivity extends AppCompatActivity implements SurfaceT
 //                Log.e(TAG, "onSurfaceTextureUpdated, thread ID " + Thread.currentThread().getId());
             }
         });
-        Log.w(TAG, "onCreate, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onCreate, thread ID " + Thread.currentThread().getId());
     }
 
     @Override
@@ -123,7 +123,7 @@ public class ScreenCaptureActivity extends AppCompatActivity implements SurfaceT
     @Override
     protected void onStart() {
         super.onStart();
-        Log.w(TAG, "onStart, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onStart, thread ID " + Thread.currentThread().getId());
     }
 
     @Override
@@ -132,19 +132,19 @@ public class ScreenCaptureActivity extends AppCompatActivity implements SurfaceT
         if (!PermissionHelper.hasWriteStoragePermission(this)) {
             PermissionHelper.requestWriteStoragePermission(this);
         }
-        Log.w(TAG, "onResume, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onResume, thread ID " + Thread.currentThread().getId());
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Log.w(TAG, "onPause, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onPause, thread ID " + Thread.currentThread().getId());
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        Log.w(TAG, "onStop, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onStop, thread ID " + Thread.currentThread().getId());
     }
 
     @Override
@@ -156,7 +156,7 @@ public class ScreenCaptureActivity extends AppCompatActivity implements SurfaceT
             mEglBase_view = null;
         }
         mEncodeThread.threadQuit();
-        Log.w(TAG, "onDestroy, thread ID " + Thread.currentThread().getId());
+        Logging.w(TAG, "onDestroy, thread ID " + Thread.currentThread().getId());
     }
 
 
@@ -325,7 +325,7 @@ public class ScreenCaptureActivity extends AppCompatActivity implements SurfaceT
         new Handler(getMainLooper()).post(new Runnable() {
             @Override
             public void run() {
-                Log.d(TAG, "logAndToast " + msg);
+                Logging.d(TAG, "logAndToast " + msg);
                 if (logToast != null) {
                     logToast.cancel();
                 }

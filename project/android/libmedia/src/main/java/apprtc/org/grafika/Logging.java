@@ -30,7 +30,7 @@ public class Logging {
     public static interface LoggingCallback {
         void debug(String str);
         void info(String str);
-        void warring(String str);
+        void warning(String str);
         void error(String str);
     }
 
@@ -103,7 +103,7 @@ public class Logging {
                     loggingCallback.error(tag + ": " + message);
                     break;
                 case LS_WARNING:
-                    loggingCallback.warring(tag + ": " + message);
+                    loggingCallback.warning(tag + ": " + message);
                     break;
                 case LS_INFO:
                     loggingCallback.info(tag + ": " + message);
