@@ -23,11 +23,6 @@ set(IJKJ4A_PATH ${CMAKE_SOURCE_DIR}/3rdparty/ijkj4a)
 add_subdirectory(${IJKJ4A_PATH})
 
 
-#liboboe
-set(OBOE_PATH ${CMAKE_SOURCE_DIR}/3rdparty/oboe)
-add_subdirectory(${OBOE_PATH})
-
-
 #libffmpeg
 set(FFMPEG_PATH ${3RDPARTY_PATH}/ffmpeg/${ANDROID_ABI})
 
@@ -62,8 +57,8 @@ target_include_directories(${MODULE} PRIVATE ${CMAKE_SOURCE_DIR})
 
 target_include_directories(${MODULE} PRIVATE ${IJKJ4A_PATH})
 target_link_libraries(${MODULE} ijkj4a)
-target_include_directories(${MODULE} PRIVATE ${OBOE_PATH}/include)
-target_link_libraries(${MODULE} oboe)
+#target_include_directories(${MODULE} PRIVATE ${OBOE_PATH}/include)
+#target_link_libraries(${MODULE} oboe)
 target_include_directories(${MODULE} PRIVATE ${CORE_PATH})
 target_link_libraries(${MODULE} libcore)
 target_include_directories(${MODULE} PRIVATE ${FFMPEG_PATH}/include)

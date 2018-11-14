@@ -2,91 +2,8 @@
 #include <pthread.h>
 #include <unistd.h>
 #include "jni_bridge.h"
-#include "media_codec.h"
 #include "jni/android_jni.h"
-#include "audio_playback.h"
 #include "ff_recode.h"
-
-JNIEXPORT jlong JNICALL createEngine_mediacodec(JNIEnv *env, jclass) {
-    MediaClassEngine *codec_engine = new MediaClassEngine();
-    int64_t engineHandle = reinterpret_cast<int64_t>(codec_engine);
-    return (jlong) engineHandle;
-}
-
-JNIEXPORT jobject JNICALL configureCodec_mediacodec(JNIEnv *env, jclass clazz, jlong engineHandle, jint width, jint height, jboolean userSurface) {
-    MediaClassEngine *codec_engine = reinterpret_cast<MediaClassEngine*>(engineHandle);
-    jobject surface = codec_engine->createCodec(env, width, height, userSurface);
-    return surface;
-}
-
-JNIEXPORT void JNICALL startCodec_mediacodec(JNIEnv *env, jclass clazz, jlong engineHandle) {
-    MediaClassEngine *codec_engine = reinterpret_cast<MediaClassEngine*>(engineHandle);
-    codec_engine->startEncode(env);
-}
-
-
-JNIEXPORT void JNICALL stopCodec_mediacodec(JNIEnv *env, jclass clazz, jlong engineHandle) {
-    MediaClassEngine *codec_engine = reinterpret_cast<MediaClassEngine*>(engineHandle);
-    codec_engine->stopCodec(env);
-}
-
-JNIEXPORT void JNICALL deleteEngine_mediacodec(JNIEnv *env, jclass clazz, jlong engineHandle) {
-    MediaClassEngine *codec_engine = reinterpret_cast<MediaClassEngine*>(engineHandle);
-    delete codec_engine;
-}
-
-
-JNIEXPORT jlong JNICALL createEngine_audioOboe(JNIEnv *env, jclass) {
-    AudioPalybackEngine *engine = new(std::nothrow) AudioPalybackEngine();
-    int64_t engineHandle = reinterpret_cast<int64_t>(engine);
-    return engineHandle;
-}
-
-JNIEXPORT void JNICALL setToneOn_audioOboe(JNIEnv *env, jclass clazz, jlong engineHandle, jboolean isToneOn) {
-    AudioPalybackEngine *engine = reinterpret_cast<AudioPalybackEngine*>(engineHandle);
-
-    return;
-}
-
-JNIEXPORT void JNICALL setAudioApi_audioOboe(JNIEnv *env, jclass clazz, jlong engineHandle, jint audioApi) {
-    AudioPalybackEngine *engine = reinterpret_cast<AudioPalybackEngine*>(engineHandle);
-    oboe::AudioApi api = static_cast<oboe::AudioApi>(audioApi);
-    engine->setAudioApi(api);
-    return;
-}
-
-JNIEXPORT void JNICALL setAudioDeviceId_audioOboe(JNIEnv *env, jclass clazz, jlong engineHandle, jint deviceId) {
-    AudioPalybackEngine *engine = reinterpret_cast<AudioPalybackEngine*>(engineHandle);
-    engine->setDeviceId(deviceId);
-    return;
-}
-
-JNIEXPORT void JNICALL setChannelCount_audioOboe(JNIEnv *env, jclass clazz, jlong engineHandle, jint channelCount) {
-    AudioPalybackEngine *engine = reinterpret_cast<AudioPalybackEngine*>(engineHandle);
-    engine->setChannelCount(channelCount);
-    return;
-}
-
-JNIEXPORT void JNICALL setBufferSizeInBursts_audioOboe(JNIEnv *env, jclass clazz, jlong engineHandle, jint bufferSizeInBursts) {
-    AudioPalybackEngine *engine = reinterpret_cast<AudioPalybackEngine*>(engineHandle);
-    engine->setBufferSizeInBursts(bufferSizeInBursts);
-    return;
-}
-
-JNIEXPORT jdouble JNICALL getCurrentOutputLatencyMillis_audioOboe(JNIEnv *env, jclass clazz, jlong engineHandle) {
-    AudioPalybackEngine *engine = reinterpret_cast<AudioPalybackEngine*>(engineHandle);
-    return engine->getCurrentOutputLatencyMillis();
-}
-
-JNIEXPORT jboolean JNICALL isLatencyDetectionSupported_audioOboe(JNIEnv *env, jclass clazz, jlong engineHandle) {
-    AudioPalybackEngine *engine = reinterpret_cast<AudioPalybackEngine*>(engineHandle);
-    return engine->isLatencyDetectionSupported();
-}
-
-JNIEXPORT void JNICALL deleteEngine_audioOboe(JNIEnv *env, jclass clazz, jlong engineHandle) {
-    AudioPalybackEngine *engine = reinterpret_cast<AudioPalybackEngine*>(engineHandle);
-    delete engine;
-}
 
 
 JNIEXPORT jlong JNICALL demuxer_createEngine(JNIEnv *env, jclass clazz) {
@@ -144,23 +61,6 @@ JNIEXPORT jint JNICALL demuxer_getMediaInfo(JNIEnv *env, jclass clazz, jlong eng
 
 
 static JNINativeMethod g_methods[] = {
-        {"native_createEngine_mediacodec",         "()J",          (void *) createEngine_mediacodec},
-        {"native_configureCodec_mediacodec",       "(JIIZ)Landroid/view/Surface;",         (void *) configureCodec_mediacodec},
-        {"native_startCodec_mediacodec",           "(J)V",         (void *) startCodec_mediacodec},
-        {"native_stopCodec_mediacodec",            "(J)V",         (void *) stopCodec_mediacodec},
-        {"native_deleteEngine_mediacodec",         "(J)V",         (void *) deleteEngine_mediacodec},
-
-        {"native_createEngine_audioOboe",               "()J",              (void *) createEngine_audioOboe},
-        {"native_deleteEngine_audioOboe",               "(J)V",             (void *) deleteEngine_audioOboe},
-        {"native_setToneOn_audioOboe",                  "(JZ)V",            (void *) setToneOn_audioOboe},
-        {"native_setAudioApi_audioOboe",                "(JI)V",            (void *) setAudioApi_audioOboe},
-        {"native_setAudioDeviceId_audioOboe",           "(JI)V",            (void *) setAudioDeviceId_audioOboe},
-        {"native_setChannelCount_audioOboe",            "(JI)V",            (void *) setChannelCount_audioOboe},
-        {"native_setBufferSizeInBursts_audioOboe",      "(JI)V",            (void *) setBufferSizeInBursts_audioOboe},
-        {"native_getCurrentOutputLatencyMillis_audioOboe",      "(J)D",          (void *) getCurrentOutputLatencyMillis_audioOboe},
-        {"native_isLatencyDetectionSupported_audioOboe",        "(J)Z",          (void *) isLatencyDetectionSupported_audioOboe},
-
-
         {"native_demuxer_createEngine",                 "()J",  (void *) demuxer_createEngine},
         {"native_demuxer_openInputFormat",              "(JLjava/lang/String;)I",   (void *) demuxer_openInputFormat},
         {"native_demuxer_closeInputFormat",              "(J)I",   (void *) demuxer_closeInputFormat},

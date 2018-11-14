@@ -24,17 +24,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="com.org.grafika.ScreenCaptureActivity">
-
-        </activity>
         <activity
             android:name="com.org.grafika.ViewsActivity"
             android:theme="@style/AppTheme.NoActionBar">
-
-        </activity>
-        <activity
-            android:name="com.org.grafika.AudioPlaybackActivity"
-            android:label="oboe">
 
         </activity>
         <activity

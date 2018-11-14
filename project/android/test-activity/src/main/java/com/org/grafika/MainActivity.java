@@ -35,15 +35,9 @@ public class MainActivity extends ListActivity {
             { "TextureView and  SurfaceView",
                     "show with TextureView and  SurfaceView",
                     "ViewsActivity" },
-            { "capture screen",
-                    "capture screen, and call mediacodec in ndk",
-                    "ScreenCaptureActivity" },
             { "recode media",
                     "recode media",
                     "RecodeMediaActivity" },
-            { "playback audio",
-                    "use oboe playback audio",
-                    "AudioPlaybackActivity" },
     };
 
     /**
