@@ -54,6 +54,8 @@ file(GLOB SRCS
     ${CMAKE_SOURCE_DIR}/*.cpp
     ${CMAKE_SOURCE_DIR}/media_common/*.h
     ${CMAKE_SOURCE_DIR}/media_common/*.cpp
+    ${CMAKE_SOURCE_DIR}/jni/*.h
+    ${CMAKE_SOURCE_DIR}/jni/*.cpp
     )
 add_library(${MODULE} SHARED ${SRCS})
 target_include_directories(${MODULE} PRIVATE ${CMAKE_SOURCE_DIR})

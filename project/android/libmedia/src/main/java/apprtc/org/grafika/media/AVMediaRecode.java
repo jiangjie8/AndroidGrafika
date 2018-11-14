@@ -448,6 +448,11 @@ public class AVMediaRecode implements AVRecodeInterface {
         }
     }
 
+    @Override
+    public void setLoggCallback(Logging.LoggingCallback callback) {
+        Logging.setLoggingCallback(callback);
+    }
+
     public class ReportInfo{
         long start_time_ms = Long.MIN_VALUE;
         long first_pts_ms = Long.MIN_VALUE;

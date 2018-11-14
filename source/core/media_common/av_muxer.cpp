@@ -44,7 +44,6 @@ namespace av {
     int AVMuxer::writeHeader(){
         int ret = 0;
         AVFormatContext *ofmt_ctx = m_outputFormat.get();
-        av_dump_format(ofmt_ctx, 0, m_output.c_str(), 1);
         if (!(ofmt_ctx->flags & AVFMT_NOFILE)) {
             ret = avio_open(&ofmt_ctx->pb, m_output.c_str(), AVIO_FLAG_WRITE);
             if (ret < 0) {
@@ -53,6 +52,7 @@ namespace av {
             }
         }
         ret = avformat_write_header(ofmt_ctx, NULL);
+        av_dump_format(ofmt_ctx, 0, m_output.c_str(), 1);
         if (ret < 0) {
             LOGE("Error occurred when avformat_write_header");
             return ret;

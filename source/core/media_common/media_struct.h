@@ -77,7 +77,7 @@ namespace av{
             if(ptr){
                 if (ptr->pb && !(ptr->oformat->flags & AVFMT_NOFILE))
                     avio_closep(&ptr->pb);
-                avformat_close_input(&ptr);
+                avformat_free_context(ptr);
             }
         }
     };

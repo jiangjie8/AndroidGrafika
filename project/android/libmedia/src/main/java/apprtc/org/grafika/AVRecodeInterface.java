@@ -16,6 +16,7 @@ public interface AVRecodeInterface {
     public void starRecode();
     public void stopRecode();
     public void waitRecode();
+    public void setLoggCallback(Logging.LoggingCallback callback);
 
     public interface onRecodeEventListener {
         void onPrintReport(final String message);

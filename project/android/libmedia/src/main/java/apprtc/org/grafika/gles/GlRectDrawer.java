@@ -89,8 +89,8 @@ public class GlRectDrawer implements RendererCommon.GlDrawer {
 
   // Texture coordinates - (0, 0) is bottom-left and (1, 1) is top-right.
   private static final FloatBuffer FULL_RECTANGLE_TEX_BUF = GlUtil.createFloatBuffer(new float[] {
-      0.0f, 0.007353f, // Bottom left.
-      1.0f, 0.007353f, // Bottom right.
+      0.0f, 0.0f, // Bottom left.
+      1.0f, 0.0f, // Bottom right.
       0.0f, 1.0f, // Top left.
       1.0f, 1.0f // Top right.
   });
@@ -211,7 +211,7 @@ public class GlRectDrawer implements RendererCommon.GlDrawer {
       GlUtil.checkNoGLES2Error("Initialize fragment shader uniform values.");
       // Initialize vertex shader attributes.
       shader.glShader.setVertexAttribArray("in_pos", 2, FULL_RECTANGLE_BUF);
-      shader.glShader.setVertexAttribArray("in_tc", 2, FULL_RECTANGLE_TEX_BUF);
+      shader.glShader.setVertexAttribArray("in_tc", 2, FULL_RECTANGLE_TEX_BUF_Encoder);
     }
     shader.glShader.useProgram();
     // Copy the texture transformation matrix over.

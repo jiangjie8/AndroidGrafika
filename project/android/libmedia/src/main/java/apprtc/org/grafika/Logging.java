@@ -27,6 +27,20 @@ public class Logging {
         return fallbackLogger;
     }
 
+    public static interface LoggingCallback {
+        void debug(String str);
+        void info(String str);
+        void warring(String str);
+        void error(String str);
+    }
+
+    static LoggingCallback loggingCallback = null;
+
+    public static void setLoggingCallback(LoggingCallback callback){
+        loggingCallback = callback;
+    }
+
+
     // TODO(solenberg): Remove once dependent projects updated.
     @Deprecated
     public enum TraceLevel {
@@ -55,13 +69,13 @@ public class Logging {
     // Keep in sync with webrtc/rtc_base/logging.h:LoggingSeverity.
     public enum Severity { LS_SENSITIVE, LS_VERBOSE, LS_INFO, LS_WARNING, LS_ERROR, LS_NONE }
 
-//    public static void enableLogThreads() {
+    public static void enableLogThreads() {
 //        nativeEnableLogThreads();
-//    }
-//
-//    public static void enableLogTimeStamps() {
+    }
+
+    public static void enableLogTimeStamps() {
 //        nativeEnableLogTimeStamps();
-//    }
+    }
 
     // TODO(solenberg): Remove once dependent projects updated.
     @Deprecated
@@ -82,6 +96,24 @@ public class Logging {
 //            nativeLog(severity.ordinal(), tag, message);
 //            return;
 //        }
+
+        if(loggingCallback != null){
+            switch (severity) {
+                case LS_ERROR:
+                    loggingCallback.error(tag + ": " + message);
+                    break;
+                case LS_WARNING:
+                    loggingCallback.warring(tag + ": " + message);
+                    break;
+                case LS_INFO:
+                    loggingCallback.info(tag + ": " + message);
+                    break;
+                default:
+                    loggingCallback.debug(tag + ": " + message);
+                    break;
+            }
+            return;
+        }
 
         // Fallback to system log.
         Level level;

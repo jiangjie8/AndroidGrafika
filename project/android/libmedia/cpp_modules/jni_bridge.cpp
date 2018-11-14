@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include "jni_bridge.h"
 #include "media_codec.h"
-#include "android_jni.h"
+#include "jni/android_jni.h"
 #include "audio_playback.h"
 #include "ff_recode.h"
 
@@ -201,6 +201,13 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
     retval = J4A_LoadAll__catchAll(env);
     JNI_CHECK_RET(retval == 0, env, NULL, NULL, -1);
+
+    {
+        J4A_Logging_Class_Init(env);
+        J4A_AVPacket_Class_Init(env);
+        J4A_MediaInfo_Class_Init(env);
+    }
+
     return JNI_VERSION_1_4;
 }
 

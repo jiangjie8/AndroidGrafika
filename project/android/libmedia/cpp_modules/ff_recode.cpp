@@ -11,27 +11,27 @@ namespace av{
             case AV_LOG_FATAL:{}
             case AV_LOG_ERROR:{
                 vsnprintf(buffer, sizeof(buffer) -1, fmt, vl);
-                J4A_ALOGE("%s", buffer);
+                ALOGE("%s", buffer);
                 break;
             }
             case AV_LOG_WARNING:{
                 vsnprintf(buffer, sizeof(buffer) -1, fmt, vl);
-                J4A_ALOGW("%s", buffer);
+                ALOGW("%s", buffer);
                 break;
             }
             case AV_LOG_INFO:{
                 vsnprintf(buffer, sizeof(buffer) -1, fmt, vl);
-                J4A_ALOGI("%s", buffer);
+                ALOGI("%s", buffer);
                 break;
             }
             case AV_LOG_DEBUG:{
                 vsnprintf(buffer, sizeof(buffer) -1, fmt, vl);
-                J4A_ALOGD("%s", buffer);
+                ALOGD("%s", buffer);
                 break;
             }
             default:{
                 vsnprintf(buffer, sizeof(buffer) -1, fmt, vl);
-                J4A_ALOGV("%s", buffer);
+                ALOGV("%s", buffer);
                 break;
             }
         }
@@ -41,8 +41,6 @@ namespace av{
         static bool init = false;
         if(!init){
             init = true;
-            J4A_AVPacket_Class_Init(env);
-            J4A_MediaInfo_Class_Init(env);
             av_log_set_callback(av_log_default_callback);
         }
     }

@@ -2,7 +2,7 @@
 #define MEDIA__CODEC_H
 
 #include "jni_bridge.h"
-#include "android_jni.h"
+#include "jni/android_jni.h"
 __EXTERN_C_BEGIN
 #include "j4a/j4a_base.h"
 #include "j4a/class/android/media/MediaCodec.h"
