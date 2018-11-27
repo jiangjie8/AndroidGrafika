@@ -19,6 +19,7 @@
 #include <mutex>
 #include <memory>
 #include <map>
+#include <list>
 #include <deque>
 
 namespace av {
@@ -79,14 +80,20 @@ private:
     std::map<int64_t, VideoPadding> m_sei_info1;
     std::map<int64_t, VideoPadding> m_sei_info2;
 
+    std::unique_ptr<AVBSFContext, AVBSFContextDeleter> mp4H264_bsf = nullptr;
+
     AVRational m_frame_rate;
     int m_videIndex = -1;
     int m_audioIndex = -1;
 
+    std::list<std::unique_ptr<AVPacket, AVPacketDeleter>> m_packet_queue;
+    void writeVideoPacket(AVPacket *packet);
+    int insertVideoPacket(AVPacket *packet);
     int getVideoFrame(AVDemuxer *demuxer, AVDecoder *decoder, AVFrame *frame);
     int writeAudioPacket(AVDemuxer *input, AVMuxer  *output, int64_t pts_flag, int index);
     int encodeWriteFrame(AVEncoder *encoder, AVFrame *frame);
     int frameScale(AVFrame *frame);
+    int readClipPacket(int64_t small_pts);
 };
 
 typedef struct CommandCtx

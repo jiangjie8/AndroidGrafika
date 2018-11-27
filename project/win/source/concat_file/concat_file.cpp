@@ -17,7 +17,7 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
     }
     std::map<int64_t, VideoPadding>paddingInfo;
     VStreamType stream_type = VStreamType::SMALL;
-    int64_t previous_pts = AV_NOPTS_VALUE;
+    int64_t last_pts = AV_NOPTS_VALUE;
 
     while (true)
     {
@@ -30,10 +30,10 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
             continue;
         }
         else if (!(packet->flags & AV_PKT_FLAG_KEY)) {
-            previous_pts = packet->pts + packet->duration;
+            last_pts = packet->pts + packet->duration;
             if (paddingInfo.size() > 0) {
                 auto iterator = --paddingInfo.end();
-                iterator->second.end_pts = previous_pts > iterator->second.end_pts ? previous_pts :iterator->second.end_pts;
+                iterator->second.end_pts = last_pts > iterator->second.end_pts ? last_pts :iterator->second.end_pts;
             }
             continue;
         }
@@ -73,13 +73,61 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
     return paddingInfo;
 }
 
+std::vector<std::string> split(const char *s, char delimiter)
+{
+    std::string str(s);
+    std::vector<std::string> tokens;
+    std::string token;
+    auto p0 = 0;
+    auto p1 = str.find(delimiter);
+    while(p1 != std::string::npos)
+    {
+        token = str.substr(p0, p1 - p0);
+        tokens.push_back(token);
+        p0 = p1 + 1;
+        p1 = str.find(delimiter, p0);
+        if (p1 == std::string::npos) {
+            token = str.substr(p0);
+            tokens.push_back(token);
+        }
+    }
+
+    if (p0 == 0) {
+        tokens.push_back(str.substr(p0));
+    }
+
+    return tokens;
+}
 
 int MergerCtx::openInputStreams(const char *file1, const char *file2) 
 {
     int ret = 0;
 
-    m_sei_info1 = probe_sei_info(file1);
-    m_sei_info2 = probe_sei_info(file2);
+    {
+        //m_sei_info1 = probe_sei_info(file1);
+        AVFormatContext *ifmt_ctx = nullptr;
+        ret = avformat_open_input(&ifmt_ctx, file1, nullptr, nullptr);
+        if (ret == 0) {
+            AVDictionaryEntry *e = av_dict_get(ifmt_ctx->metadata, "comment", nullptr, AV_DICT_MATCH_CASE);
+            if (e != nullptr) {
+                std::string value(e->value);
+                auto tokens = split(value.c_str(), ',');
+                for (auto &clip : tokens) {
+                    if(clip.size() < 2)
+                        continue;
+                    auto duration = split(clip.c_str(), ':');
+                    int64_t start = std::stoll(duration.at(0));
+                    int64_t end = std::stoll(duration.at(1));
+                    m_sei_info1.insert(std::make_pair(start, VideoPadding(VStreamType::LARGE, start, end)));
+                    
+                }
+            }
+        }
+        if (ifmt_ctx != nullptr) {
+            avformat_close_input(&ifmt_ctx);
+        }
+        m_sei_info2 = probe_sei_info(file2);
+    }
 
     m_aStream1.reset(new AVDemuxer());
     if (m_aStream1->openInputFormat(file1) < 0) {
@@ -101,6 +149,14 @@ int MergerCtx::openInputStreams(const char *file1, const char *file2)
         m_vStream2.reset();
         return -1;
     }
+
+    std::string  extensions = m_vStream2->getInputFormat()->extensions;
+    if (extensions.find("mp4") || extensions.find("mov") || extensions.find("m4a")) {
+        if (m_vStream2->getStream(AVMEDIA_TYPE_VIDEO) != nullptr) {
+            mp4H264_bsf.reset(initBsfFilter(m_vStream2->getStream(AVMEDIA_TYPE_VIDEO)->codecpar, "h264_mp4toannexb"));
+        }
+    }
+
     return ret;
 }
 
@@ -159,8 +215,9 @@ int MergerCtx::cfgCodec()
 
         AVDictionary *options = nullptr;
         av_dict_set(&options, "tune", "film", 0);
-        av_dict_set(&options, "preset", "veryfast", 0);
-        av_dict_set(&options, "x264-params", "crf=22:aq-mode=1", 0);
+        av_dict_set(&options, "crf", "20", 0);
+        av_dict_set(&options, "preset", "ultrafast", 0);
+        av_dict_set(&options, "x264-params", "aq-mode=1:cabac=1:deblock=-1,-1:subme=1:vbv-maxrate=15000:vbv-bufsize=30000", 0);
         if ((ret = m_encodeV->openCodec(&options)) < 0)
             m_encodeV.reset();
         av_dict_free(&options);
@@ -198,32 +255,108 @@ int MergerCtx::getVideoFrame(AVDemuxer *demuxer, AVDecoder *decoder, AVFrame *fr
             if (demuxer->getStream(packet->stream_index)->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
                 break;
         }
-            
         if (ret == AVERROR_EOF) {
-            ret = decoder->flushCodec(frame);
-            frame->pts = av_rescale_q(frame->pts, decoder->getCodecContext()->time_base, { 1, AV_TIME_BASE });
-                     
-            return ret;
+            ret = decoder->flushCodec(frame);                     
         }
-        else if (ret < 0) {
+        if (ret < 0) {
             break;
         }
- 
-        av_packet_rescale_ts(packet.get(), { 1, AV_TIME_BASE }, decoder->getCodecContext()->time_base);
-        ret = decoder->sendPacket(packet.get());
-        if (ret < 0)
-            break;
-        ret = decoder->receiveFrame(frame);
-        if (ret == AVERROR(EAGAIN)) {
-            continue;
+
+        AVRational time_base = { m_frame_rate.den, m_frame_rate.num };
+        //decode small in preview.
+        if (packet->data) {
+            av_packet_rescale_ts(packet.get(), { 1, AV_TIME_BASE }, time_base);
+            ret = decoder->sendPacket(packet.get());
+            //get large in preview
+            if (ret == 0) {
+                packet->stream_index = m_videIndex;
+                av_packet_rescale_ts(packet.get(), time_base, { 1, AV_TIME_BASE });
+                int64_t pts = packet->pts;
+                bool use_large = false;
+                for (auto &bitrateInfo : m_sei_info1) {
+                    VStreamType type = bitrateInfo.second.streamType;
+                    int64_t pts_start = bitrateInfo.second.start_pts;
+                    int64_t pts_end = bitrateInfo.second.end_pts;
+                    if (pts >= pts_start && pts < pts_end) {
+                        use_large = type == VStreamType::LARGE ? true : false;
+                        break;
+                    }
+                }
+                if (use_large) {
+                    if (mp4H264_bsf) {
+                        applyBitstream(mp4H264_bsf.get(), packet.get());
+                    }
+                    insertVideoPacket(packet.release());
+                }
+            }
+            if (ret < 0)
+                break;
+            ret = decoder->receiveFrame(frame);
+            if (ret == AVERROR(EAGAIN)) {
+                continue;
+            }
+            else if (ret < 0) {
+                break;
+            }
         }
-        else if (ret < 0) {
-            break;
-        }
-        vp_frame_rescale_ts(frame, decoder->getCodecContext()->time_base, { 1, AV_TIME_BASE });
+        vp_frame_rescale_ts(frame, time_base, { 1, AV_TIME_BASE });
         break;
     }
     return ret;
+}
+
+int MergerCtx::insertVideoPacket(AVPacket *packet){
+    //LOGE("insert pts: %lld   dts: %lld  %d\n", packet->pts, packet->dts, packet->flags);
+    for (auto iterator = m_packet_queue.cbegin(); iterator != m_packet_queue.cend(); iterator++) {
+        if ((*iterator)->dts > packet->dts) {
+            m_packet_queue.insert(iterator, std::unique_ptr<AVPacket, AVPacketDeleter>(packet));
+            packet = nullptr;
+            break;
+        };
+    }
+    if (packet) {
+        m_packet_queue.push_back(std::unique_ptr<AVPacket, AVPacketDeleter>(packet));
+    }
+    return 0;
+}
+
+void MergerCtx::writeVideoPacket(AVPacket *packet) {
+
+    int64_t pts = packet->pts;
+    bool insert_small = true;
+    for (auto &bitrateInfo : m_sei_info1) {
+        VStreamType type = bitrateInfo.second.streamType;
+        int64_t pts_start = bitrateInfo.second.start_pts;
+        int64_t pts_end = bitrateInfo.second.end_pts;
+        if (pts >= pts_start && pts < pts_end) {
+            insert_small = type == VStreamType::LARGE ? false : true;
+            break;
+        }
+    }
+    for (auto &bitrateInfo : m_sei_info2) {
+        VStreamType type = bitrateInfo.second.streamType;
+        int64_t pts_start = bitrateInfo.second.start_pts;
+        int64_t pts_end = bitrateInfo.second.end_pts;
+        if (pts >= pts_start && pts < pts_end) {
+            insert_small = type == VStreamType::LARGE ? false : true;
+            break;
+        }
+    }
+    if (insert_small) {
+        insertVideoPacket(packet);
+        packet = nullptr;
+    }
+
+    readClipPacket(pts);
+    if (m_packet_queue.size() > 0) {
+        auto pkt = m_packet_queue.begin();
+        auto pts = (*pkt)->pts;
+        //LOGE("write pts: %lld   dts: %lld  %d\n", (*pkt)->pts, (*pkt)->dts, (*pkt)->flags);
+        m_output->writePacket(m_packet_queue.front().release());
+        m_packet_queue.pop_front();
+        if (m_aStream1)
+            writeAudioPacket(m_aStream1.get(), m_output.get(), pts, m_audioIndex);
+    }
 }
 
 int MergerCtx::writeAudioPacket(AVDemuxer *input, AVMuxer  *output, int64_t pts_flag, int index) {
@@ -248,7 +381,6 @@ int MergerCtx::writeAudioPacket(AVDemuxer *input, AVMuxer  *output, int64_t pts_
             }
         }
     }
-
     return 0;
 }
 int MergerCtx::frameScale(AVFrame *frame) {
@@ -269,6 +401,65 @@ int MergerCtx::frameScale(AVFrame *frame) {
 }
 
 
+
+int MergerCtx::readClipPacket(int64_t small_pts) {
+    bool use2 = false;
+    int ret = 0;
+    for (auto bitrateInfo : m_sei_info2) {
+        VStreamType type = bitrateInfo.second.streamType;
+        int64_t pts_start = bitrateInfo.second.start_pts;
+        int64_t pts_end = bitrateInfo.second.end_pts;
+        if (small_pts >= pts_start && small_pts < pts_end) {
+            use2 = type == VStreamType::LARGE ? true : false;
+            break;
+        }
+    }
+
+    if (use2) {
+        std::unique_ptr<AVPacket, AVPacketDeleter> packet(av_packet_alloc());
+        while (true) {
+            ret = m_vStream2->readPacket(packet.get());
+            if (ret < 0)
+                break;
+            if (m_vStream2->getStream(packet->stream_index)->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+                break;
+        }
+        if (ret == 0) {
+            if (mp4H264_bsf) {
+                applyBitstream(mp4H264_bsf.get(), packet.get());
+            }
+            packet->stream_index = m_videIndex;
+            insertVideoPacket(packet.release());
+        }
+    }
+    return 0;
+}
+
+
+int MergerCtx::encodeWriteFrame(AVEncoder *encoder, AVFrame *frame) {
+    int ret = 0;    
+    std::unique_ptr<AVPacket, AVPacketDeleter> packet(av_packet_alloc());
+    
+    if (frameScale(frame) < 0)
+        return ret;
+    vp_frame_rescale_ts(frame, { 1, AV_TIME_BASE }, encoder->getCodecContext()->time_base);
+
+    ret = encoder->sendFrame(frame);
+    ret = encoder->receivPacket(packet.get());
+    if (ret == AVERROR(EAGAIN)) {
+        return ret;
+    }
+    else if (ret < 0) {
+        return ret;
+    }
+    packet->stream_index = m_videIndex;
+    av_packet_rescale_ts(packet.get(), encoder->getCodecContext()->time_base, { 1, AV_TIME_BASE });
+    packet->duration = av_rescale_q(1, av_inv_q(m_frame_rate), { 1, AV_TIME_BASE });
+    writeVideoPacket(packet.release());
+ 
+    return 0;
+}
+
 int MergerCtx::mergerLoop() {
     if (m_vStream1 == nullptr ||
         m_vStream2 == nullptr ||
@@ -280,72 +471,66 @@ int MergerCtx::mergerLoop() {
     }
 
     int ret = 0;
-    int64_t last_one_pts = AV_NOPTS_VALUE;
 
     AVCodecParameters *codecpar = avcodec_parameters_alloc();
     avcodec_parameters_from_context(codecpar, m_encodeV->getCodecContext());
     m_videIndex = m_output->addStream(codecpar);
     avcodec_parameters_free(&codecpar);
-
-    if(m_aStream1)
+    if (m_aStream1)
         m_audioIndex = m_output->addStream(m_aStream1->getCodecParameters(AVMEDIA_TYPE_AUDIO));
-    ret = m_output->writeHeader();
+
+    {
+        std::map<int64_t, VideoPadding> sei_info;
+        for (auto info : m_sei_info1) {
+            sei_info.insert(std::make_pair(info.second.start_pts,
+                VideoPadding(VStreamType::LARGE, info.second.start_pts, info.second.end_pts)));
+        }
+        for (auto info : m_sei_info2) {
+            sei_info.insert(std::make_pair(info.second.start_pts,
+                VideoPadding(VStreamType::LARGE, info.second.start_pts, info.second.end_pts)));
+        }
+
+        char buffer[1024] = { 0 };
+        for (auto info : sei_info) {
+            snprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer), "%lld:%lld,", info.second.start_pts, info.second.end_pts);
+        }
+        m_output->setMetaDate("comment", buffer);
+    }
+
+    if (m_output->writeHeader() < 0)
+        return ret;
 
     while (ret == 0)
     {
-        bool use2 = false;
-        std::unique_ptr<AVFrame, AVFrameDeleter> vframe1(av_frame_alloc());
-        ret = getVideoFrame(m_vStream1.get(), m_decodeV1.get(), vframe1.get());
+        std::unique_ptr<AVFrame, AVFrameDeleter> frame(av_frame_alloc());
+        ret = getVideoFrame(m_vStream1.get(), m_decodeV1.get(), frame.get());
         if (ret < 0)
             break;
+        frame->pict_type = AV_PICTURE_TYPE_NONE;
+        for (auto bitrateInfo : m_sei_info1) {
+            VStreamType type = bitrateInfo.second.streamType;
+            int64_t pts_start = bitrateInfo.second.start_pts;
+            int64_t pts_end = bitrateInfo.second.end_pts;
+            if (type == VStreamType::LARGE) {
+                if ((frame->pts <= pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
+                    (frame->pts <= pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
+                    frame->pict_type = AV_PICTURE_TYPE_I;
+                };
+            }
+        }
 
         for (auto bitrateInfo : m_sei_info2) {
             VStreamType type = bitrateInfo.second.streamType;
             int64_t pts_start = bitrateInfo.second.start_pts;
             int64_t pts_end = bitrateInfo.second.end_pts;
-            if (vframe1->pts >= pts_start && vframe1->pts < pts_end) {
-                use2 = type == VStreamType::LARGE ? true : false;
-                break;
+            if (type == VStreamType::LARGE) {
+                if ((frame->pts <= pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
+                    (frame->pts <= pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
+                    frame->pict_type = AV_PICTURE_TYPE_I;
+                };
             }
         }
 
-        std::unique_ptr<AVFrame, AVFrameDeleter> frame;
-        if (use2) {
-            std::unique_ptr<AVFrame, AVFrameDeleter> vframe2(av_frame_alloc());
-            while (true) {
-                ret = getVideoFrame(m_vStream2.get(), m_decodeV2.get(), vframe2.get());
-                if (ret == AVERROR_EOF) {
-                    ret = 0;
-                    use2 = false;
-                    break;
-                }
-                else if (ret < 0 || vframe2->pts >= vframe1->pts) {
-                    break;
-                } 
-            }
-            if (vframe2->pict_type != AV_PICTURE_TYPE_I) {
-                vframe2->pict_type = AV_PICTURE_TYPE_NONE;
-            }
-            frame.reset(vframe2.release());
-        }
-        if(!use2){
-            vframe1->pict_type = AV_PICTURE_TYPE_NONE;
-            frame.reset(vframe1.release());
-        }
-
-
-        if (ret < 0)
-            break;
-        if (frame->pts <= last_one_pts) {
-            LOGE("drop  %lld  <= %lld \n", frame->pts, last_one_pts);
-            continue;
-        }
-
-        ret = frameScale(frame.get());
-        if (ret < 0)
-            break;
-            
-        last_one_pts = frame->pts;
         ret = encodeWriteFrame(m_encodeV.get(), frame.get());
         if (ret == AVERROR(EAGAIN)) {
             ret = 0;
@@ -354,8 +539,6 @@ int MergerCtx::mergerLoop() {
         else if (ret < 0) {
             break;
         }
-
-
     }
 
     //flush encode
@@ -365,40 +548,15 @@ int MergerCtx::mergerLoop() {
         ret = m_encodeV->flushCodec(packet.get());
         if (ret < 0)
             break;
-        av_packet_rescale_ts(packet.get(), m_encodeV->getCodecContext()->time_base, { 1, AV_TIME_BASE });
-        int64_t vpts = packet->pts;
-        packet->duration = av_rescale_q(1, av_inv_q(m_frame_rate), { 1, AV_TIME_BASE });
         packet->stream_index = m_videIndex;
-        m_output->writePacket(packet.get());
-
-        if (m_aStream1)
-            writeAudioPacket(m_aStream1.get(), m_output.get(), vpts, m_audioIndex);
+        av_packet_rescale_ts(packet.get(), m_encodeV->getCodecContext()->time_base, { 1, AV_TIME_BASE });
+        packet->duration = av_rescale_q(1, av_inv_q(m_frame_rate), { 1, AV_TIME_BASE });
+        writeVideoPacket(packet.release());
     }
-
     if (m_aStream1)
         writeAudioPacket(m_aStream1.get(), m_output.get(), AV_NOPTS_VALUE, m_audioIndex);
     ret = m_output->closeOutputForamt();
     return ret;
-}
-
-int MergerCtx::encodeWriteFrame(AVEncoder *encoder, AVFrame *frame) {
-    int ret = 0;
-    std::unique_ptr<AVPacket, AVPacketDeleter> vpacket(av_packet_alloc());
-    //frame->pict_type = AV_PICTURE_TYPE_NONE;
-    vp_frame_rescale_ts(frame, { 1, AV_TIME_BASE }, encoder->getCodecContext()->time_base);
-    ret = encoder->sendFrame(frame);
-    ret = encoder->receivPacket(vpacket.get());
-    if (ret < 0)
-        return ret;
-        
-    av_packet_rescale_ts(vpacket.get(), m_encodeV->getCodecContext()->time_base, { 1, AV_TIME_BASE });
-    int64_t vpts = vpacket->pts;
-    vpacket->duration = av_rescale_q(1, av_inv_q(m_frame_rate), { 1, AV_TIME_BASE });
-    vpacket->stream_index = m_videIndex;
-    m_output->writePacket(vpacket.get());
-    if (m_aStream1)
-        writeAudioPacket(m_aStream1.get(), m_output.get(), vpts, m_audioIndex);
-    return 0;
 }
 }
 

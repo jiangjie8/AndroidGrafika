@@ -25,6 +25,7 @@ public:
      * */
     int addStream(const AVCodecParameters *parm);
     int setExternalData(uint8_t *data, size_t size, int stream_index);
+    int setMetaDate(const char *key, const char *value);
     int writeHeader();
     int writePacket(AVPacket *packet);
 

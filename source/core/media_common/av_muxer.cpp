@@ -40,6 +40,9 @@ namespace av {
         return 0;
     }
 
+    int AVMuxer::setMetaDate(const char *key, const char *value) {
+        return av_dict_set(&m_outputFormat->metadata, key, value, 0);
+    }
 
     int AVMuxer::writeHeader(){
         int ret = 0;
