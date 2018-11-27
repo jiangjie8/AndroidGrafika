@@ -215,7 +215,7 @@ int MergerCtx::cfgCodec()
 
         AVDictionary *options = nullptr;
         av_dict_set(&options, "tune", "film", 0);
-        av_dict_set(&options, "crf", "20", 0);
+        av_dict_set(&options, "crf", "22", 0);
         av_dict_set(&options, "preset", "ultrafast", 0);
         av_dict_set(&options, "x264-params", "aq-mode=1:cabac=1:deblock=-1,-1:subme=1:vbv-maxrate=15000:vbv-bufsize=30000", 0);
         if ((ret = m_encodeV->openCodec(&options)) < 0)
