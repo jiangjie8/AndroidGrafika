@@ -6,13 +6,13 @@ AVBSFContext* initBsfFilter(const AVCodecParameters *codecpar, const char *filte
 
     const AVBitStreamFilter * bsf = av_bsf_get_by_name(filter_name);
     if (bsf == nullptr) {
-        LOGE(" find  %s  filter error", filter_name);
+        LOGE(" find  %s  filter error\n", filter_name);
         return nullptr;
     }
     AVBSFContext *bsf_ctx = nullptr;
     av_bsf_alloc(bsf, &bsf_ctx);
     if (bsf_ctx == nullptr) {
-        LOGE("av_bsf_alloc error");
+        LOGE("av_bsf_alloc error\n");
         return nullptr;
     }
     avcodec_parameters_copy(bsf_ctx->par_in, codecpar);
@@ -30,7 +30,7 @@ int applyBitstream(AVBSFContext *bsf, AVPacket *packet) {
     int ret = 0;
     ret = av_bsf_send_packet(bsf, packet);
     if (ret < 0) {
-        LOGE("av_bsf_send_packet error %d", ret);
+        LOGE("av_bsf_send_packet error %d\n", ret);
         return ret;
     }
     av_packet_unref(packet);

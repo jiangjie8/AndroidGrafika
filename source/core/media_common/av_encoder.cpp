@@ -43,7 +43,7 @@ namespace av{
         int ret = 0;
         ret = avcodec_open2(m_codec_ctx.get(), m_codec, options);
         if (ret < 0) {
-            LOGE("Failed to open encoder ");
+            LOGE("Failed to open encoder \n");
             m_codec_ctx.reset();
             return -1;
         }

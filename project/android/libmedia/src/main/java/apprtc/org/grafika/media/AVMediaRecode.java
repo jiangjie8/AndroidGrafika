@@ -309,6 +309,7 @@ public class AVMediaRecode implements AVRecodeInterface {
                         mMediaInfo.framerate, rootEglBase.getEglBaseContext())){
                     if(mVideoEncoder != null){mVideoEncoder.release(); mVideoEncoder = null;}
                     eventListener_inner.onErrorMessage(-1, "open video encode error");
+                    Logging.e(TAG,"open video encode error ");
                 }
             };
         }
@@ -387,6 +388,7 @@ public class AVMediaRecode implements AVRecodeInterface {
                 mEngineHandleDemuxer = JNIBridge.native_demuxer_createEngine();
                 if(JNIBridge.native_demuxer_openInputFormat(mEngineHandleDemuxer, inputSource) < 0){
                     eventListener_inner.onErrorMessage(-1, "openInputFormat error");
+                    Logging.e(TAG, "openInputFormat error " + inputSource);
                     return;
                 }
                 JNIBridge.native_demuxer_getMediaInfo(mEngineHandleDemuxer, mMediaInfo);
@@ -395,6 +397,7 @@ public class AVMediaRecode implements AVRecodeInterface {
                 if(!initVideoDecoder()){
                     if(mVideoDecoder != null){mVideoDecoder.release(); mVideoDecoder = null;}
                     eventListener_inner.onErrorMessage(-1, "open video decoder error");
+                    Logging.e(TAG, "open video decoder error");
                 }
                 Logging.w(TAG, "duration " + mMediaInfo.duration + ",startTime " + mMediaInfo.startTime + ",videoCodecID " + mMediaInfo.videoCodecID +
                                         ",width " + mMediaInfo.width + ",height " + mMediaInfo.height + ",framerate " + mMediaInfo.framerate);

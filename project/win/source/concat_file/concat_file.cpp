@@ -394,7 +394,7 @@ int MergerCtx::frameScale(AVFrame *frame) {
         av_frame_unref(frame);
         ret = m_filterGraph->getFrame(frame);
         if (ret < 0) {
-            LOGE("filter get frame error");
+            LOGE("filter get frame error\n");
         }
     }
     return ret;

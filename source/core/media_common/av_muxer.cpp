@@ -22,7 +22,7 @@ namespace av {
         int ret = 0;
         AVStream *stream = avformat_new_stream(m_outputFormat.get(), nullptr);
         if(stream == nullptr){
-            LOGE("avformat_new_stream error");
+            LOGE("avformat_new_stream error\n");
             return -1;
         }
         avcodec_parameters_copy(stream->codecpar, parm);
@@ -50,14 +50,14 @@ namespace av {
         if (!(ofmt_ctx->flags & AVFMT_NOFILE)) {
             ret = avio_open(&ofmt_ctx->pb, m_output.c_str(), AVIO_FLAG_WRITE);
             if (ret < 0) {
-                LOGE("Could not open output file '%s'  ret %d", m_output.c_str(), ret);
+                LOGE("Could not open output file '%s'  ret %d\n", m_output.c_str(), ret);
                 return ret;
             }
         }
         ret = avformat_write_header(ofmt_ctx, NULL);
         av_dump_format(ofmt_ctx, 0, m_output.c_str(), 1);
         if (ret < 0) {
-            LOGE("Error occurred when avformat_write_header");
+            LOGE("Error occurred when avformat_write_header\n");
             return ret;
         }
         return ret;

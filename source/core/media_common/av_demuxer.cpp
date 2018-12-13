@@ -6,13 +6,13 @@ namespace av{
         AVFormatContext *ifmt_ctx = nullptr;
         ret = avformat_open_input(&ifmt_ctx, inputStr, nullptr, nullptr);
         if (ret < 0) {
-            LOGE("Could not open input file '%s'   %d", inputStr, ret);
+            LOGE("Could not open input file '%s'   %d\n", inputStr, ret);
             return ret;
         }
 
         if ((ret = avformat_find_stream_info(ifmt_ctx, 0)) < 0) {
             avformat_close_input(&ifmt_ctx);
-            LOGE("Failed to retrieve input stream information");
+            LOGE("Failed to retrieve input stream information\n");
             return ret;
         }
         m_inputFormat.reset(ifmt_ctx); ifmt_ctx = nullptr;
