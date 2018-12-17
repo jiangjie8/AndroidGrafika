@@ -179,7 +179,8 @@ int MergerCtx::cfgCodec()
         m_decodeV1->cfgCodec(param);
         auto decode_src = m_vStream1->getStream(AVMEDIA_TYPE_VIDEO)->codec;
         auto decode_dst = m_decodeV1->getCodecContext();
-        decode_dst->time_base = decode_src->time_base;
+        decode_dst->time_base.num = m_vStream1->getStream(AVMEDIA_TYPE_VIDEO)->avg_frame_rate.den;
+        decode_dst->time_base.den = m_vStream1->getStream(AVMEDIA_TYPE_VIDEO)->avg_frame_rate.num;
         decode_dst->ticks_per_frame = decode_src->ticks_per_frame;
         if ((ret = m_decodeV1->openCodec()) < 0) {
             m_decodeV1.reset();
