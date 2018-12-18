@@ -191,6 +191,7 @@ int MergerCtx::cfgCodec()
             
     }
 
+    param = m_vStream2->getCodecParameters(AVMEDIA_TYPE_VIDEO);
     if (m_decodeV) {
         m_encodeV.reset(new AVEncoder());
         std::unique_ptr<AVCodecParameters, AVCodecParametersDeleter>
