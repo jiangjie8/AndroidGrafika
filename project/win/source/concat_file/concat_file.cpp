@@ -175,35 +175,23 @@ int MergerCtx::cfgCodec()
     auto param = m_vStream1->getCodecParameters(AVMEDIA_TYPE_VIDEO);
     if (param) {
         m_frame_rate = { m_vStream1->video_codecParam.frame_rate_num , m_vStream1->video_codecParam.frame_rate_den };
-        m_decodeV1.reset(new AVDecoder());
-        m_decodeV1->cfgCodec(param);
+        m_decodeV.reset(new AVDecoder());
+        m_decodeV->cfgCodec(param);
         auto decode_src = m_vStream1->getStream(AVMEDIA_TYPE_VIDEO)->codec;
-        auto decode_dst = m_decodeV1->getCodecContext();
-        decode_dst->time_base.num = m_vStream1->getStream(AVMEDIA_TYPE_VIDEO)->avg_frame_rate.den;
-        decode_dst->time_base.den = m_vStream1->getStream(AVMEDIA_TYPE_VIDEO)->avg_frame_rate.num;
+        auto decode_dst = m_decodeV->getCodecContext(); 
+        decode_dst->framerate = m_frame_rate;
         decode_dst->ticks_per_frame = decode_src->ticks_per_frame;
-        if ((ret = m_decodeV1->openCodec()) < 0) {
-            m_decodeV1.reset();
+        decode_dst->time_base = { m_vStream1->video_codecParam.frame_rate_den,
+            m_vStream1->video_codecParam.frame_rate_num * decode_dst->ticks_per_frame };
+        
+        if ((ret = m_decodeV->openCodec()) < 0) {
+            m_decodeV.reset();
             return ret;
         }
             
     }
 
-    param = m_vStream2->getCodecParameters(AVMEDIA_TYPE_VIDEO);
-    if (param) {
-        m_decodeV2.reset(new AVDecoder());
-        m_decodeV2->cfgCodec(param);
-        auto decode_src = m_vStream2->getStream(AVMEDIA_TYPE_VIDEO)->codec;
-        auto decode_dst = m_decodeV2->getCodecContext();
-        decode_dst->time_base = decode_src->time_base;
-        decode_dst->ticks_per_frame = decode_src->ticks_per_frame;
-        if ((ret = m_decodeV2->openCodec()) < 0) {
-            m_decodeV2.reset();
-            return ret;
-        }
-    }
-
-    if (m_decodeV1 && m_decodeV2) {
+    if (m_decodeV) {
         m_encodeV.reset(new AVEncoder());
         std::unique_ptr<AVCodecParameters, AVCodecParametersDeleter>
             encode_param(avcodec_parameters_alloc());
@@ -211,8 +199,8 @@ int MergerCtx::cfgCodec()
         m_encodeV->cfgCodec(encode_param.get(), "libx264");
         if (m_output->getOutputFormat()->flags & AVFMT_GLOBALHEADER)
             m_encodeV->getCodecContext()->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-        m_encodeV->getCodecContext()->time_base = m_decodeV1->getCodecContext()->time_base;
-        m_encodeV->getCodecContext()->ticks_per_frame = m_decodeV1->getCodecContext()->ticks_per_frame;
+        m_encodeV->getCodecContext()->time_base = m_decodeV->getCodecContext()->time_base;
+        m_encodeV->getCodecContext()->ticks_per_frame = m_decodeV->getCodecContext()->ticks_per_frame;
 
         AVDictionary *options = nullptr;
         av_dict_set(&options, "tune", "film", 0);
@@ -232,7 +220,7 @@ int MergerCtx::cfgCodec()
             "smallFlag.png",
             encode_param->width, encode_param->height,
             SWS_FAST_BILINEAR);
-        ret = m_filterGraph->initFilter(m_decodeV1->getCodecContext(), m_encodeV->getCodecContext(), filter_spec);
+        ret = m_filterGraph->initFilter(m_decodeV->getCodecContext(), m_encodeV->getCodecContext(), filter_spec);
         if (ret < 0) {
             m_filterGraph = nullptr;
         }
@@ -263,7 +251,8 @@ int MergerCtx::getVideoFrame(AVDemuxer *demuxer, AVDecoder *decoder, AVFrame *fr
             break;
         }
 
-        AVRational time_base = { m_frame_rate.den, m_frame_rate.num };
+        //this time_base may change, so use encode timebase;
+        AVRational time_base = m_encodeV->getCodecContext()->time_base; 
         //decode small in preview.
         if (packet->data) {
             av_packet_rescale_ts(packet.get(), { 1, AV_TIME_BASE }, time_base);
@@ -465,8 +454,7 @@ int MergerCtx::mergerLoop() {
     if (m_vStream1 == nullptr ||
         m_vStream2 == nullptr ||
         m_output == nullptr ||
-        m_decodeV1 == nullptr ||
-        m_decodeV2 == nullptr ||
+        m_decodeV == nullptr ||
         m_encodeV == nullptr) {
         return -1;
     }
@@ -504,7 +492,7 @@ int MergerCtx::mergerLoop() {
     while (ret == 0)
     {
         std::unique_ptr<AVFrame, AVFrameDeleter> frame(av_frame_alloc());
-        ret = getVideoFrame(m_vStream1.get(), m_decodeV1.get(), frame.get());
+        ret = getVideoFrame(m_vStream1.get(), m_decodeV.get(), frame.get());
         if (ret < 0)
             break;
         frame->pict_type = AV_PICTURE_TYPE_NONE;

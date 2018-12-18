@@ -53,8 +53,7 @@ public:
         m_aStream1.reset();
         m_vStream1.reset();
         m_vStream2.reset();
-        m_decodeV1.reset();
-        m_decodeV2.reset();
+        m_decodeV.reset();
         m_output.reset();
         m_encodeV.reset();
     }
@@ -72,8 +71,7 @@ private:
     unique_ptr<AVDemuxer> m_aStream1 = nullptr;
     unique_ptr<AVDemuxer> m_vStream1 = nullptr;
     unique_ptr<AVDemuxer> m_vStream2 = nullptr;
-    unique_ptr<AVDecoder> m_decodeV1 = nullptr;
-    unique_ptr<AVDecoder> m_decodeV2 = nullptr;
+    unique_ptr<AVDecoder> m_decodeV = nullptr;
     unique_ptr<AVMuxer> m_output = nullptr;
     unique_ptr<AVEncoder> m_encodeV = nullptr;
 
