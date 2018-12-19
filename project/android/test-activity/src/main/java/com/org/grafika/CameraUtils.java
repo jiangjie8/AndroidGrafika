@@ -56,7 +56,7 @@ public class CameraUtils {
             }
         }
 
-        Logging.w(TAG, "Unable to set preview size to " + width + "x" + height);
+        Logging.i(TAG, "Unable to set preview size to " + width + "x" + height);
         if (ppsfv != null) {
             parms.setPreviewSize(ppsfv.width, ppsfv.height);
         }

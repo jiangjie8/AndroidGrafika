@@ -293,7 +293,7 @@ public class AVMediaRecode implements AVRecodeInterface {
 
         if((ptsMs >= end && leftDuration >= 3000) || ptsMs == Long.MAX_VALUE){
             String output = String.format(clipDirectory + clipPrefix, clipIndex);
-            Logging.w(TAG, "new output " + output);
+            Logging.i(TAG, "new output " + output);
             MediaInfo mediaInfo = new MediaInfo();
             mediaInfo.videoCodecID = EncoderID;
             mediaInfo.width = clipWidth;
@@ -371,7 +371,7 @@ public class AVMediaRecode implements AVRecodeInterface {
         if(mVideoEncoder != null){ mVideoEncoder.release(); mVideoEncoder = null; }
         if(mSurfaceTextureHelper != null){mSurfaceTextureHelper.dispose();}
         if(rootEglBase != null){rootEglBase.release();}
-        Logging.w(TAG, "!!!!!!!!release all source");
+        Logging.i(TAG, "!!!!!!!!release all source");
     }
 
     @Override
@@ -399,9 +399,9 @@ public class AVMediaRecode implements AVRecodeInterface {
                     eventListener_inner.onErrorMessage(-1, "open video decoder error");
                     Logging.e(TAG, "open video decoder error");
                 }
-                Logging.w(TAG, "duration " + mMediaInfo.duration + ",startTime " + mMediaInfo.startTime + ",videoCodecID " + mMediaInfo.videoCodecID +
+                Logging.i(TAG, "duration " + mMediaInfo.duration + ",startTime " + mMediaInfo.startTime + ",videoCodecID " + mMediaInfo.videoCodecID +
                                         ",width " + mMediaInfo.width + ",height " + mMediaInfo.height + ",framerate " + mMediaInfo.framerate);
-                Logging.w(TAG, "audioCodecID " + mMediaInfo.audioCodecID + ",channels " + mMediaInfo.channels + ",sampleRate " + mMediaInfo.sampleRate +
+                Logging.i(TAG, "audioCodecID " + mMediaInfo.audioCodecID + ",channels " + mMediaInfo.channels + ",sampleRate " + mMediaInfo.sampleRate +
                         ",sampleDepth " + mMediaInfo.sampleDepth + ",frameSize " + mMediaInfo.frameSize);
             }
         });

@@ -259,7 +259,7 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
     public void signalEndOfInputStream(){
         if(!inputFrameEnd){
             mediaCodec.signalEndOfInputStream();
-            Logging.w(TAG, "signalEndOfInputStream");
+            Logging.i(TAG, "signalEndOfInputStream");
             inputFrameEnd = true;
         }
     }
@@ -308,7 +308,7 @@ public class MediaCodecVideoEncoder implements AVMediaCodec{
             if (result >= 0) {
                 if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
                     encodePacketEnd = true;
-                    Logging.w(TAG, "encode end, no packet will be available after this");
+                    Logging.i(TAG, "encode end, no packet will be available after this");
                 }
 
                 // MediaCodec doesn't care about Buffer position/remaining/etc so we can

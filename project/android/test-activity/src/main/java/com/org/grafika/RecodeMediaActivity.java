@@ -25,7 +25,6 @@ public class RecodeMediaActivity extends AppCompatActivity {
     long start_time = 0;
 
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,11 +34,12 @@ public class RecodeMediaActivity extends AppCompatActivity {
     }
 
     int loopNumber = 0;
-    void startRecoder(){
+
+    void startRecoder() {
         mediaRecode = AVRecodeInterface.getRecodeInstance();
         mediaRecode.openInputSource("/sdcard/Download/2k.mp4");
         File d = new File("/sdcard/Download/jie");
-        if(!d.exists()) {
+        if (!d.exists()) {
             d.mkdirs();
         }
         mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "t_hevc_5m-%03d.mp4",
@@ -59,8 +59,8 @@ public class RecodeMediaActivity extends AppCompatActivity {
 
             @Override
             public void onRecodeFinish() {
-                if(mWork){
-                    Logging.e(TAG, "=== spend time  " + (System.currentTimeMillis() - start_time)/1000.0);
+                if (mWork) {
+                    Logging.e(TAG, "=== spend time  " + (System.currentTimeMillis() - start_time) / 1000.0);
                     start_time = System.currentTimeMillis();
 //                    startRecoder();
                 }
@@ -72,27 +72,26 @@ public class RecodeMediaActivity extends AppCompatActivity {
         Logging.e(TAG, "=== startRecoder  loopNumber " + loopNumber++);
     }
 
-    void stopRecoder(){
+    void stopRecoder() {
         mediaRecode.stopRecode();
     }
 
     private boolean mWork = false;
+
     public void start_onClick(@SuppressWarnings("unused") View unused) {
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.start_capture);
         mWork = !mWork;
-        if(mWork){
+        if (mWork) {
             startRecoder();
             Logging.w(TAG, "press button, start requested");
-            fab.setImageResource (android.R.drawable.ic_media_pause);
-        }
-        else{
+            fab.setImageResource(android.R.drawable.ic_media_pause);
+        } else {
 //            mHandler.sendMessage(mHandler.obtainMessage(MSE_STOP_RECODER));
             stopRecoder();
             Logging.w(TAG, "press button, Stop requested");
-            fab.setImageResource (android.R.drawable.ic_media_play);
+            fab.setImageResource(android.R.drawable.ic_media_play);
         }
     }
-
 
 
     @Override

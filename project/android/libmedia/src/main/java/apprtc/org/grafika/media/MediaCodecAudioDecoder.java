@@ -135,7 +135,7 @@ public class MediaCodecAudioDecoder implements AVMediaCodec {
         }
         try {
             if(buffer == null){
-                Logging.w(TAG, "input packet end");
+                Logging.i(TAG, "input packet end");
                 mediaCodec.queueInputBuffer(inputBufferIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                 inputPacketEnd = true;
             }
@@ -181,7 +181,7 @@ public class MediaCodecAudioDecoder implements AVMediaCodec {
             sendPacket(null, 0, 0);
         }
         if(!decodeFrameEnd){
-//            Logging.w(TAG, "flush decode");
+//            Logging.i(TAG, "flush decode");
             return dequeueOutputBuffer(1000 * 1000);
         }
         return null;
@@ -199,7 +199,7 @@ public class MediaCodecAudioDecoder implements AVMediaCodec {
             if(result >= 0){
                 if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
                     decodeFrameEnd = true;
-                    Logging.w(TAG, "decode end, no frame will be available after this");
+                    Logging.i(TAG, "decode end, no frame will be available after this");
                 }
                 ByteBuffer outputBuffer = mediaCodec.getOutputBuffer(result);
                 outputBuffer.position(codecBufferInfo.offset);
@@ -215,7 +215,7 @@ public class MediaCodecAudioDecoder implements AVMediaCodec {
             }
             else if(result == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
                 mediaCodec.getOutputFormat();
-//                Logging.w(TAG, "INFO_OUTPUT_FORMAT_CHANGED");
+//                Logging.i(TAG, "INFO_OUTPUT_FORMAT_CHANGED");
                 return dequeueOutputBuffer(dequeueTimeoutUs);
             }
             else if(result == MediaCodec.INFO_TRY_AGAIN_LATER){

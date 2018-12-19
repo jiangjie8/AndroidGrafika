@@ -134,17 +134,17 @@ public class Logging {
         fallbackLogger.log(level, tag + ": " + message);
     }
 
-    public static void d(String tag, String message) {
-        log(Severity.LS_INFO, tag, message);
-    }
+    public static void d(String tag, String message) { log(Severity.LS_VERBOSE, tag, message); }
 
-    public static void e(String tag, String message) {
-        log(Severity.LS_ERROR, tag, message);
-    }
+    public static void i(String tag, String message) { log(Severity.LS_INFO, tag, message); }
 
     public static void w(String tag, String message) {
         log(Severity.LS_WARNING, tag, message);
     }
+
+    public static void e(String tag, String message) { log(Severity.LS_ERROR, tag, message); }
+
+
 
     public static void e(String tag, String message, Throwable e) {
         log(Severity.LS_ERROR, tag, message);

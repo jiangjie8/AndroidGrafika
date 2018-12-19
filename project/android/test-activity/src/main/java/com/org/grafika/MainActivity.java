@@ -1,7 +1,10 @@
 package com.org.grafika;
 
 import android.app.ListActivity;
+import android.content.ContentValues;
 import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
@@ -54,6 +57,44 @@ public class MainActivity extends ListActivity {
             };
 
 
+    void getConfigure(){
+        try{
+            Uri uri = Uri.parse("content://com.hm.vmovie.contentprovider/config");
+            Cursor cursor = getContentResolver().query(uri, null, null, null,
+                    null);
+            if(cursor != null && cursor.moveToNext()){
+                Logging.e(TAG, "USB_ENCODER_RESOLUTION " + cursor.getInt(cursor.getColumnIndex("USB_ENCODER_RESOLUTION")));
+                Logging.e(TAG, "USB_ENCODER_BITRATE " + cursor.getInt(cursor.getColumnIndex("USB_ENCODER_BITRATE")));
+                Logging.e(TAG, "KEY_FRAME_INTERVAL " + cursor.getInt(cursor.getColumnIndex("KEY_FRAME_INTERVAL")));
+                Logging.e(TAG, "AUDIO_BITRATE " + cursor.getInt(cursor.getColumnIndex("AUDIO_BITRATE")));
+                Logging.e(TAG, "AUDIO_SAMPLING_RATE " + cursor.getInt(cursor.getColumnIndex("AUDIO_SAMPLING_RATE")));
+                Logging.e(TAG, "RECORD_INTERVAL " + cursor.getInt(cursor.getColumnIndex("RECORD_INTERVAL")));
+                Logging.e(TAG, "RECORD_ALARM " + cursor.getInt(cursor.getColumnIndex("RECORD_ALARM")));
+
+            }
+        }catch (Exception e){
+            Logging.e(TAG, "error " + e.toString());
+        }
+    }
+
+    void setConfigure(){
+        try{
+            Uri uri = Uri.parse("content://com.hm.vmovie.contentprovider/config");
+            ContentValues values = new ContentValues();
+            values.put("USB_ENCODER_RESOLUTION", 0);
+            values.put("USB_ENCODER_BITRATE", 10000);
+            values.put("KEY_FRAME_INTERVAL", 7);
+            values.put("AUDIO_BITRATE", 2);
+            values.put("AUDIO_SAMPLING_RATE", 0);
+            values.put("RECORD_INTERVAL", 1);
+            values.put("RECORD_ALARM", 1000);
+            getContentResolver().update(uri, values, null, null);
+
+        }catch (Exception e){
+            Logging.e(TAG, "set error " + e.toString());
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,6 +105,9 @@ public class MainActivity extends ListActivity {
                 new int[] { android.R.id.text1, android.R.id.text2 } ));
 
 
+        setConfigure();
+        Logging.e(TAG,"================");
+        getConfigure();
     }
 
     @Override

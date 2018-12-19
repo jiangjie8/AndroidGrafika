@@ -122,7 +122,7 @@ public class MediaCodecAudioEncoder implements AVMediaCodec{
         checkOnMediaCodecThread();
         try {
             if(buffer == null){
-                Logging.w(TAG, "input frame end");
+                Logging.i(TAG, "input frame end");
                 mediaCodec.queueInputBuffer(inputBufferIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                 inputFrameEnd = true;
             }else{
@@ -142,7 +142,7 @@ public class MediaCodecAudioEncoder implements AVMediaCodec{
     public boolean sendFrame(ByteBuffer buffer, int size, long presentationTimeStamUs) {
         int index = dequeueInputBuffer();
         if(index < 0){
-            Logging.w(TAG, "dequeue audio InputBuffer error " + index + " drop frame " + droppedFrames++);
+            Logging.e(TAG, "dequeue audio InputBuffer error " + index + " drop frame " + droppedFrames++);
             return false;
         }
         return  encodeBuffer(index, buffer, size, presentationTimeStamUs);
@@ -187,7 +187,7 @@ public class MediaCodecAudioEncoder implements AVMediaCodec{
             if (result >= 0) {
                 if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
                     encodePacketEnd = true;
-                    Logging.w(TAG, "encode end, no packet will be available after this");
+                    Logging.i(TAG, "encode end, no packet will be available after this");
                 }
                 ByteBuffer outputBuffer = mediaCodec.getOutputBuffer(result);
                 outputBuffer.position(codecBufferInfo.offset);
