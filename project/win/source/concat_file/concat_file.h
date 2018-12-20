@@ -14,6 +14,7 @@
 #include <iostream>
 #include <thread>
 #include <string>
+#include <algorithm>   
 #include <type_traits>
 #include <thread>
 #include <mutex>
@@ -92,6 +93,8 @@ private:
     int encodeWriteFrame(AVEncoder *encoder, AVFrame *frame);
     int frameScale(AVFrame *frame);
     int readClipPacket(int64_t small_pts);
+
+    void genCommentInfo(std::map<int64_t, VideoPadding> &sei_info);
 };
 
 typedef struct CommandCtx

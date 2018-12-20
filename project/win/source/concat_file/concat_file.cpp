@@ -451,6 +451,47 @@ int MergerCtx::encodeWriteFrame(AVEncoder *encoder, AVFrame *frame) {
     return 0;
 }
 
+
+void MergerCtx::genCommentInfo(std::map<int64_t, VideoPadding> &sei_info) {
+
+    auto insert_fun = [&sei_info](std::pair<int64_t, VideoPadding>info) {
+        if (sei_info.find(info.first) == sei_info.end()) {
+            sei_info.insert(std::make_pair(info.second.start_pts,
+                VideoPadding(VStreamType::LARGE, info.second.start_pts, info.second.end_pts)));
+        }
+        else {
+            auto exist_info = sei_info.find(info.first)->second;
+            if (exist_info.end_pts - exist_info.start_pts < info.second.end_pts - info.second.start_pts) {
+                sei_info.insert(std::make_pair(info.second.start_pts,
+                    VideoPadding(VStreamType::LARGE, info.second.start_pts, info.second.end_pts)));
+            }
+        }
+    };
+
+    std::for_each(m_sei_info1.begin(), m_sei_info1.end(), insert_fun);
+    std::for_each(m_sei_info2.begin(), m_sei_info2.end(), insert_fun);
+
+    std::map<int64_t, VideoPadding> clip_info;
+    for (auto info : sei_info) {
+        if (clip_info.size() == 0) {
+            clip_info.insert(info);
+            continue;
+        }
+        auto clip1 = (--clip_info.end())->second;
+        auto clip2 = info.second;
+        if (clip1.end_pts < clip2.start_pts) {
+            clip_info.insert(info);
+        }
+        else if (clip1.end_pts < clip2.end_pts) {
+            clip_info.erase(clip1.start_pts);
+            clip_info.emplace(std::make_pair(clip1.start_pts, VideoPadding(VStreamType::LARGE, clip1.start_pts, clip2.end_pts)));
+        }
+    
+    }
+
+    sei_info = clip_info;
+}
+
 int MergerCtx::mergerLoop() {
     if (m_vStream1 == nullptr ||
         m_vStream2 == nullptr ||
@@ -471,14 +512,7 @@ int MergerCtx::mergerLoop() {
 
     {
         std::map<int64_t, VideoPadding> sei_info;
-        for (auto info : m_sei_info1) {
-            sei_info.insert(std::make_pair(info.second.start_pts,
-                VideoPadding(VStreamType::LARGE, info.second.start_pts, info.second.end_pts)));
-        }
-        for (auto info : m_sei_info2) {
-            sei_info.insert(std::make_pair(info.second.start_pts,
-                VideoPadding(VStreamType::LARGE, info.second.start_pts, info.second.end_pts)));
-        }
+        genCommentInfo(sei_info);
 
         char buffer[1024] = { 0 };
         for (auto info : sei_info) {
