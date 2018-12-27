@@ -58,6 +58,11 @@ public class RecodeMediaActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onOneFileGen(String fileName) {
+                Logging.w(TAG, "one video file generation  " + fileName);
+            }
+
+            @Override
             public void onRecodeFinish() {
                 if (mWork) {
                     Logging.e(TAG, "=== spend time  " + (System.currentTimeMillis() - start_time) / 1000.0);
@@ -65,7 +70,7 @@ public class RecodeMediaActivity extends AppCompatActivity {
 //                    startRecoder();
                 }
             }
-        }, new Handler(getMainLooper()));
+        });
 
         mediaRecode.starRecode();
         start_time = System.currentTimeMillis();

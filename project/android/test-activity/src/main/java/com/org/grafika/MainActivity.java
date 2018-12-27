@@ -21,7 +21,7 @@ import apprtc.org.grafika.Logging;
 
 
 public class MainActivity extends ListActivity {
-    public static final String TAG = "Grafika";
+    public static final String TAG = "MainActivity";
 
     private static final String rootPackageName = "com.org.grafika.";
 
@@ -106,7 +106,6 @@ public class MainActivity extends ListActivity {
 
 
         setConfigure();
-        Logging.e(TAG,"================");
         getConfigure();
     }
 

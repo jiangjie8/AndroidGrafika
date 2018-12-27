@@ -184,10 +184,11 @@ namespace av{
     }
 
     int FFRecoder::closeOutputFormat(){
+        int ret = -1;
         if(m_muxer)
-            m_muxer->closeOutputForamt();
+            ret = m_muxer->closeOutputForamt();
         m_muxer.reset();
-        return 0;
+        return ret;
     }
 
 

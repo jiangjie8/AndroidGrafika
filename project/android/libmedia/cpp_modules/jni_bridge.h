@@ -35,11 +35,11 @@ __EXTERN_C_END
 
 #else
 
-#define ALOGV(fmt, ...)   J4A_ALOGV("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define ALOGD(fmt, ...)   J4A_ALOGD("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define ALOGI(fmt, ...)   J4A_ALOGI("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define ALOGW(fmt, ...)   J4A_ALOGW("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define ALOGE(fmt, ...)   J4A_ALOGE("jie=[%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define ALOGV(fmt, ...)   J4A_ALOGV(fmt, ##__VA_ARGS__)
+#define ALOGD(fmt, ...)   J4A_ALOGD(fmt, ##__VA_ARGS__)
+#define ALOGI(fmt, ...)   J4A_ALOGI(fmt, ##__VA_ARGS__)
+#define ALOGW(fmt, ...)   J4A_ALOGW(fmt, ##__VA_ARGS__)
+#define ALOGE(fmt, ...)   J4A_ALOGE(fmt, ##__VA_ARGS__)
 
 #endif
 

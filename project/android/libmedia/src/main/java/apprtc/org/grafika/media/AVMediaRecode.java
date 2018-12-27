@@ -10,6 +10,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import apprtc.org.grafika.AVRecodeInterface;
@@ -49,6 +51,7 @@ public class AVMediaRecode implements AVRecodeInterface {
     private boolean recodeIsRunning = false;
     private int mErrorCode = 0;
 
+    private String tempOutputFile = "";
 
     private String inputSource;
     private String clipDirectory;
@@ -58,13 +61,14 @@ public class AVMediaRecode implements AVRecodeInterface {
     private int clipHeight = 0;
     private int clipDurationMs;
     private int clipIndex = 0;
-    private Handler eventListenerHandler = null;
+
+    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private onRecodeEventListener eventListener = null;
     private onRecodeEventListener eventListener_inner = new onRecodeEventListener() {
         @Override
         public void onPrintReport(final String message) {
             if(eventListener != null){
-                eventListenerHandler.post(new Runnable() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         eventListener.onPrintReport(message);
@@ -77,7 +81,7 @@ public class AVMediaRecode implements AVRecodeInterface {
         public void onErrorMessage(final int errorCode, final String errorMessage) {
             mErrorCode = errorCode;
             if(eventListener != null){
-                eventListenerHandler.post(new Runnable() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         eventListener.onErrorMessage(errorCode, errorMessage);
@@ -87,9 +91,21 @@ public class AVMediaRecode implements AVRecodeInterface {
         }
 
         @Override
+        public void onOneFileGen(String fileName) {
+            if(eventListener != null){
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        eventListener.onOneFileGen(fileName);
+                    }
+                });
+            }
+        }
+
+        @Override
         public void onRecodeFinish() {
             if(eventListener != null){
-                eventListenerHandler.post(new Runnable() {
+                executor.execute(new Runnable() {
                     @Override
                     public void run() {
                         eventListener.onRecodeFinish();
@@ -292,15 +308,15 @@ public class AVMediaRecode implements AVRecodeInterface {
         }
 
         if((ptsMs >= end && leftDuration >= 3000) || ptsMs == Long.MAX_VALUE){
-            String output = String.format(clipDirectory + clipPrefix, clipIndex);
-            Logging.i(TAG, "new output " + output);
+            tempOutputFile = String.format(clipDirectory + clipPrefix, clipIndex);
+            Logging.i(TAG, "new output " + tempOutputFile);
             MediaInfo mediaInfo = new MediaInfo();
             mediaInfo.videoCodecID = EncoderID;
             mediaInfo.width = clipWidth;
             mediaInfo.height = clipHeight;
-            ret = JNIBridge.native_demuxer_openOutputFormat(mEngineHandleDemuxer, output, mediaInfo);
+            ret = JNIBridge.native_demuxer_openOutputFormat(mEngineHandleDemuxer, tempOutputFile, mediaInfo);
             if(ret < 0){
-                Logging.e(TAG,"open output error " + output);
+                Logging.e(TAG,"open output error " + tempOutputFile);
                 eventListener_inner.onErrorMessage(ret, "open output error");
                 return  ret;
             }
@@ -353,7 +369,14 @@ public class AVMediaRecode implements AVRecodeInterface {
             writePacket(packet);
             mVideoEncoder.signalEndOfInputStream();
         }
-        JNIBridge.native_demuxer_closeOutputFormat(mEngineHandleDemuxer);
+        int ret = JNIBridge.native_demuxer_closeOutputFormat(mEngineHandleDemuxer);
+        if(ret < 0){
+            Logging.e(TAG,"close output file error  " + tempOutputFile);
+            eventListener_inner.onErrorMessage(ret, "open output error");
+        }else{
+            Logging.i(TAG,"one video file generation  " + tempOutputFile);
+            eventListener_inner.onOneFileGen(tempOutputFile);
+        }
         if(mVideoEncoder != null){mVideoEncoder.release(); mVideoEncoder = null;}
     }
 
@@ -425,9 +448,8 @@ public class AVMediaRecode implements AVRecodeInterface {
     }
 
     @Override
-    public void setRecodeEventListener(onRecodeEventListener listener, Handler handler){
+    public void setRecodeEventListener(onRecodeEventListener listener){
         eventListener = listener;
-        eventListenerHandler = handler;
     }
 
     @Override
