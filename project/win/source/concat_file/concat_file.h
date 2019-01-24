@@ -68,22 +68,24 @@ public:
     int mergerLoop();
     
 private:
-    unique_ptr<FilterGraph> m_filterGraph = nullptr;
-    unique_ptr<AVDemuxer> m_aStream1 = nullptr;
-    unique_ptr<AVDemuxer> m_vStream1 = nullptr;
-    unique_ptr<AVDemuxer> m_vStream2 = nullptr;
-    unique_ptr<AVDecoder> m_decodeV = nullptr;
-    unique_ptr<AVMuxer> m_output = nullptr;
-    unique_ptr<AVEncoder> m_encodeV = nullptr;
+    unique_ptr<FilterGraph> m_filterGraph{ nullptr };
+    unique_ptr<AVDemuxer> m_aStream1{ nullptr };
+    unique_ptr<AVDemuxer> m_vStream1{ nullptr };
+    unique_ptr<AVDemuxer> m_vStream2{ nullptr };
+    unique_ptr<AVDecoder> m_decodeV{ nullptr };
+    unique_ptr<AVMuxer> m_output{ nullptr };
+    unique_ptr<AVEncoder> m_encodeV{ nullptr };
 
     std::map<int64_t, VideoPadding> m_sei_info1;
     std::map<int64_t, VideoPadding> m_sei_info2;
 
-    std::unique_ptr<AVBSFContext, AVBSFContextDeleter> mp4H264_bsf = nullptr;
+    std::unique_ptr<AVBSFContext, AVBSFContextDeleter> mp4H264_bsf{ nullptr };
 
     AVRational m_frame_rate;
-    int m_videIndex = -1;
-    int m_audioIndex = -1;
+    int64_t m_frame_duration{ 0 };
+    int m_videIndex{ -1 };
+    int m_audioIndex{ -1 };
+    int64_t m_slice_offset{ 0 };
 
     std::list<std::unique_ptr<AVPacket, AVPacketDeleter>> m_packet_queue;
     void writeVideoPacket(AVPacket *packet);
@@ -92,9 +94,11 @@ private:
     int writeAudioPacket(AVDemuxer *input, AVMuxer  *output, int64_t pts_flag, int index);
     int encodeWriteFrame(AVEncoder *encoder, AVFrame *frame);
     int frameScale(AVFrame *frame);
-    int readClipPacket(int64_t small_pts);
+    int readSlicePacket(int64_t small_pts);
+    int filterConf(const AVCodecParameters *parm);
 
     void genCommentInfo(std::map<int64_t, VideoPadding> &sei_info);
+    void setCommentInfo();
 };
 
 typedef struct CommandCtx
