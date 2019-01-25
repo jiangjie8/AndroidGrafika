@@ -1,20 +1,18 @@
 package com.org.grafika;
 
 import android.os.Bundle;
-import android.os.Handler;
+
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
-
 import android.view.SurfaceView;
 import android.view.View;
 
+
 import java.io.File;
-import java.util.concurrent.TimeUnit;
 
 import apprtc.org.grafika.AVRecodeInterface;
 
 import apprtc.org.grafika.Logging;
-import apprtc.org.grafika.media.AVMediaRecode;
 
 
 public class RecodeMediaActivity extends AppCompatActivity {
@@ -43,7 +41,7 @@ public class RecodeMediaActivity extends AppCompatActivity {
             d.mkdirs();
         }
         mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "t_hevc_5m-%03d.mp4",
-                960, 540, 5 * 1024, 10000);
+                1920, 1080, (int)(1.5 * 1024), 10000);
 //        mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "hevc_1088p_2000kb-%03d.mp4",
 //                1920, 1088, 2000, 100000);
         mediaRecode.setRecodeEventListener(new AVRecodeInterface.onRecodeEventListener() {
