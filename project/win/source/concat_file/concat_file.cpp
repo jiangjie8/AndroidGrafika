@@ -1,6 +1,7 @@
 #include "concat_file.h"
 
 constexpr char *Small_LOGO = "/opt/vcloud/smallFlag.png";
+constexpr float Flexible = 0.3;
 namespace av {
 std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
 
@@ -19,6 +20,7 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
     std::map<int64_t, VideoPadding>paddingInfo;
     VStreamType stream_type = VStreamType::SMALL;
     int64_t last_pts = AV_NOPTS_VALUE;
+    int64_t duration = av_rescale_q(1, AVRational{ demuxer.video_codecParam.frame_rate_den, demuxer.video_codecParam.frame_rate_num }, { 1, AV_TIME_BASE });
 
     while (true)
     {
@@ -31,11 +33,8 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
             continue;
         }
         else if (!(packet->flags & AV_PKT_FLAG_KEY)) {
-            last_pts = packet->pts + packet->duration;
-            if (paddingInfo.size() > 0) {
-                auto iterator = --paddingInfo.end();
-                iterator->second.end_pts = last_pts > iterator->second.end_pts ? last_pts :iterator->second.end_pts;
-            }
+            //last_pts = packet->pts + packet->duration;
+            last_pts = packet->pts + duration;
             continue;
         }
         //previous_pts = packet->pts + packet->duration;
@@ -65,6 +64,10 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
                 paddingInfo.insert(std::make_pair(packet->pts, VideoPadding(stream_type, packet->pts, 0)));
             }
         }
+    }
+    if (paddingInfo.size() > 0) {
+        auto iterator = --paddingInfo.end();
+        iterator->second.end_pts = last_pts > iterator->second.end_pts ? last_pts : iterator->second.end_pts;
     }
     //LOGW("===== input  %s =====\n", input);
     //for (auto &info : paddingInfo) {
@@ -290,9 +293,9 @@ int MergerCtx::getVideoFrame(AVDemuxer *demuxer, AVDecoder *decoder, AVFrame *fr
                 bool use_large = false;
                 for (auto &bitrateInfo : m_sei_info1) {
                     VStreamType type = bitrateInfo.second.streamType;
-                    int64_t pts_start = bitrateInfo.second.start_pts;
-                    int64_t pts_end = bitrateInfo.second.end_pts;
-                    if (pts >= pts_start && pts < pts_end) {
+                    int64_t pts_start = bitrateInfo.second.start_pts - m_frame_duration * Flexible;
+                    int64_t pts_end = bitrateInfo.second.end_pts - m_frame_duration * (1 - Flexible);
+                    if (pts > pts_start && pts < pts_end) {
                         use_large = type == VStreamType::LARGE ? true : false;
                         break;
                     }
@@ -338,25 +341,28 @@ int MergerCtx::insertVideoPacket(AVPacket *packet){
 void MergerCtx::writeVideoPacket(AVPacket *packet) {
 
     int64_t pts = packet->pts;
+
     bool insert_small = true;
     for (auto &bitrateInfo : m_sei_info1) {
         VStreamType type = bitrateInfo.second.streamType;
-        int64_t pts_start = bitrateInfo.second.start_pts;
-        int64_t pts_end = bitrateInfo.second.end_pts;
-        if (pts >= pts_start && pts < pts_end) {
+        int64_t pts_start = bitrateInfo.second.start_pts - m_frame_duration * Flexible;
+        int64_t pts_end = bitrateInfo.second.end_pts - m_frame_duration * (1 - Flexible);
+        if (pts > pts_start && pts < pts_end) {
             insert_small = type == VStreamType::LARGE ? false : true;
             break;
         }
     }
     for (auto &bitrateInfo : m_sei_info2) {
         VStreamType type = bitrateInfo.second.streamType;
-        int64_t pts_start = bitrateInfo.second.start_pts;
-        int64_t pts_end = bitrateInfo.second.end_pts;
-        if (pts >= pts_start && pts <= pts_end - m_frame_duration) {
+        int64_t pts_start = bitrateInfo.second.start_pts - m_frame_duration * Flexible;
+        int64_t pts_end = bitrateInfo.second.end_pts - m_frame_duration * (1 - Flexible);
+        if (pts > pts_start && pts < pts_end) {
             insert_small = type == VStreamType::LARGE ? false : true;
             break;
         }
     }
+
+
     if (insert_small) {
         insertVideoPacket(packet);
         packet = nullptr;
@@ -422,9 +428,9 @@ int MergerCtx::readSlicePacket(int64_t small_pts) {
     int ret = 0;
     for (auto bitrateInfo : m_sei_info2) {
         VStreamType type = bitrateInfo.second.streamType;
-        int64_t pts_start = bitrateInfo.second.start_pts;
-        int64_t pts_end = bitrateInfo.second.end_pts;
-        if (small_pts >= pts_start && small_pts <= pts_end - m_frame_duration) {
+        int64_t pts_start = bitrateInfo.second.start_pts - m_frame_duration * Flexible;;
+        int64_t pts_end = bitrateInfo.second.end_pts - m_frame_duration * (1 - Flexible);
+        if (small_pts > pts_start && small_pts < pts_end) {
             use2 = type == VStreamType::LARGE ? true : false;
             break;
         }
@@ -566,8 +572,8 @@ int MergerCtx::mergerLoop() {
             int64_t pts_start = bitrateInfo.second.start_pts;
             int64_t pts_end = bitrateInfo.second.end_pts;
             if (type == VStreamType::LARGE) {
-                if ((frame->pts <= pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
-                    (frame->pts <= pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
+                if ((frame->pts < pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
+                    (frame->pts < pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
                     frame->pict_type = AV_PICTURE_TYPE_I;
                 };
             }
@@ -595,8 +601,8 @@ int MergerCtx::mergerLoop() {
             }
 
             if (type == VStreamType::LARGE) {
-                if ((frame->pts <= pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
-                    (frame->pts <= pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
+                if ((frame->pts < pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
+                    (frame->pts < pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
                     frame->pict_type = AV_PICTURE_TYPE_I;
                 };
             }
