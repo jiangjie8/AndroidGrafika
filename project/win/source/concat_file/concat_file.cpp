@@ -572,8 +572,8 @@ int MergerCtx::mergerLoop() {
             int64_t pts_start = bitrateInfo.second.start_pts;
             int64_t pts_end = bitrateInfo.second.end_pts;
             if (type == VStreamType::LARGE) {
-                if ((frame->pts < pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
-                    (frame->pts < pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
+                if ((frame->pts <= pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
+                    (frame->pts <= pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
                     frame->pict_type = AV_PICTURE_TYPE_I;
                 };
             }
@@ -601,8 +601,8 @@ int MergerCtx::mergerLoop() {
             }
 
             if (type == VStreamType::LARGE) {
-                if ((frame->pts < pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
-                    (frame->pts < pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
+                if ((frame->pts <= pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
+                    (frame->pts <= pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
                     frame->pict_type = AV_PICTURE_TYPE_I;
                 };
             }
