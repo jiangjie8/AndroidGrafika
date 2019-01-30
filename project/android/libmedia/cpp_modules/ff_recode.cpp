@@ -229,6 +229,7 @@ namespace av{
         }
         packet->pts -= m_timestamp_start;
         packet->dts -= m_timestamp_start;
+//        ALOGI("write stream index %d, pts %f dts %f  %f\n", packet->stream_index, packet->pts/1000000.0, packet->dts/1000000.0, packet->duration/1000000.0);
         return m_muxer->writePacket(packet);
     }
 
@@ -262,11 +263,12 @@ namespace av{
             return 0;
         }
 
-        //ALOGE("packet pst %lld   dts %lld  \n", pts, dts);
         ret = writeInterleavedPacket(vpacket.get());
-        int ret_a = writeAudioPacket(pts);
-        if(ret_a != AVERROR_EOF && ret_a < 0)
-            ALOGE("write audio error  ret %d\n", ret_a);
+        if(m_previous_apts == AV_NOPTS_VALUE || m_previous_apts < pts){
+            int ret_a = writeAudioPacket(pts);
+            if(ret_a != AVERROR_EOF && ret_a < 0)
+                ALOGE("write audio error  ret %d\n", ret_a);
+        }
         J4A_DeleteLocalRef__p(env, &bytebuffer);
         return ret;
     }
@@ -374,12 +376,13 @@ namespace av{
             packet->stream_index = a_index;
             av_packet_rescale_ts(packet.get(), m_audio_encoder->getCodecContext()->time_base, AV_TIME_BASE_Q);
             int64_t audio_pts = packet->pts;
-            int64_t audio_duration = packet->duration/2;
+            int64_t audio_duration = packet->duration;
+            m_previous_apts = audio_pts;
             if((ret = writeInterleavedPacket(packet.get())) < 0){
                 break;
             }
 
-            if(audio_pts + audio_duration >= video_pts &&  video_pts != AV_NOPTS_VALUE){
+            if(audio_pts + audio_duration > video_pts &&  video_pts != AV_NOPTS_VALUE){
                 break;
             }
         }
