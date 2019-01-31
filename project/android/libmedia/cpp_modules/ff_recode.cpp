@@ -226,6 +226,12 @@ namespace av{
     int FFRecoder::writeInterleavedPacket(AVPacket *packet){
         if(m_timestamp_start == AV_NOPTS_VALUE){
             m_timestamp_start = packet->pts;
+            char offset[64] = {0};
+            snprintf(offset, sizeof(offset), "offset:%lld", m_timestamp_start);
+            m_muxer->setMetaDate("Description", offset);
+        }
+        if(m_timestamp_start == AV_NOPTS_VALUE){
+            return AVERROR_UNKNOWN;
         }
         packet->pts -= m_timestamp_start;
         packet->dts -= m_timestamp_start;

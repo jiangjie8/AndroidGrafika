@@ -203,9 +203,14 @@ public class AVMediaRecode implements AVRecodeInterface {
         if(mEngineHandleDemuxer != 0){
             getExternalData();
             if(mExternalBuffer == null){
-                Logging.e(TAG, " no external data before write packet");
+                Logging.e(TAG,"no external data before write packet");
+                eventListener_inner.onErrorMessage(-1, "no external data before write packet");
             }
             ret = JNIBridge.native_demuxer_writePacket(mEngineHandleDemuxer, packet);
+            if(ret < 0){
+                Logging.e(TAG,"write packet error, type " + packet.mediaType);
+                eventListener_inner.onErrorMessage(-1, "write packet error, type " + packet.mediaType);
+            }
             mReportInfo.frames += 1;
             mReportInfo.sum_data_kb +=  packet.bufferSize/1024;
             print_report(TimeUnit.MICROSECONDS.toMillis(packet.ptsUs));
