@@ -1,7 +1,7 @@
 #include "concat_file.h"
 
-constexpr char *Small_LOGO = "/opt/vcloud/smallFlag.png";
-constexpr float Flexible = 0.3;
+constexpr char *Small_LOGO = "./smallFlag.png";
+constexpr float Flexible = 0.2;
 namespace av {
 std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
 
@@ -18,7 +18,7 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
         }
     }
     std::map<int64_t, VideoPadding>paddingInfo;
-    VStreamType stream_type = VStreamType::SMALL;
+    InsertType stream_type = InsertType::Large;
     int64_t last_pts = AV_NOPTS_VALUE;
     int64_t duration = av_rescale_q(1, AVRational{ demuxer.video_codecParam.frame_rate_den, demuxer.video_codecParam.frame_rate_num }, { 1, AV_TIME_BASE });
 
@@ -34,7 +34,7 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
         }
         else if (!(packet->flags & AV_PKT_FLAG_KEY)) {
             //last_pts = packet->pts + packet->duration;
-            last_pts = packet->pts + duration;
+            last_pts = packet->pts;
             continue;
         }
         //previous_pts = packet->pts + packet->duration;
@@ -50,10 +50,10 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
         if(vp_sei == nullptr)
             continue;
         if (strncmp((const char*)vp_sei, VP_SMALL, sizeof(VP_SMALL)) == 0) {
-            stream_type = VStreamType::SMALL;
+            LOGE("slice file can't have low bitrate data\n");
         }
         else if (strncmp((const char*)vp_sei, VP_LARGER, sizeof(VP_LARGER)) == 0) {
-            stream_type = VStreamType::LARGE;
+            stream_type = InsertType::Large;
         }
         if (paddingInfo.size() == 0) {
             paddingInfo.insert(std::make_pair(packet->pts, VideoPadding(stream_type, packet->pts, 0)));
@@ -69,11 +69,6 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
         auto iterator = --paddingInfo.end();
         iterator->second.end_pts = last_pts > iterator->second.end_pts ? last_pts : iterator->second.end_pts;
     }
-    //LOGW("===== input  %s =====\n", input);
-    //for (auto &info : paddingInfo) {
-    //    LOGW("%s   start %8lld ; end %8lld\n", info.second.streamType == VStreamType::SMALL ? "small" : "large",
-    //        info.second.start_pts, info.second.end_pts);
-    //}
     return paddingInfo;
 }
 
@@ -106,33 +101,6 @@ std::vector<std::string> split(const char *s, char delimiter)
 int MergerCtx::openInputStreams(const char *file1, const char *file2) 
 {
     int ret = 0;
-
-    {
-        //m_sei_info1 = probe_sei_info(file1);
-        AVFormatContext *ifmt_ctx = nullptr;
-        ret = avformat_open_input(&ifmt_ctx, file1, nullptr, nullptr);
-        if (ret == 0) {
-            AVDictionaryEntry *e = av_dict_get(ifmt_ctx->metadata, "comment", nullptr, AV_DICT_MATCH_CASE);
-            if (e != nullptr) {
-                std::string value(e->value);
-                auto tokens = split(value.c_str(), ',');
-                for (auto &clip : tokens) {
-                    if(clip.size() < 2)
-                        continue;
-                    auto duration = split(clip.c_str(), ':');
-                    int64_t start = std::stoll(duration.at(0));
-                    int64_t end = std::stoll(duration.at(1));
-                    m_sei_info1.insert(std::make_pair(start, VideoPadding(VStreamType::LARGE, start, end)));
-                    
-                }
-            }
-        }
-        if (ifmt_ctx != nullptr) {
-            avformat_close_input(&ifmt_ctx);
-        }
-        m_sei_info2 = probe_sei_info(file2);
-    }
-
     m_aStream1.reset(new AVDemuxer());
     if (m_aStream1->openInputFormat(file1) < 0) {
         m_aStream1.reset();
@@ -142,10 +110,15 @@ int MergerCtx::openInputStreams(const char *file1, const char *file2)
         m_aStream1.reset();
     }
 
+
     m_vStream1.reset(new AVDemuxer());
     if (m_vStream1->openInputFormat(file1) < 0) {
         m_vStream1.reset();
         return -1;
+    }
+    else {
+        m_frame_rate = { m_vStream1->video_codecParam.frame_rate_num , m_vStream1->video_codecParam.frame_rate_den };
+        m_frame_duration = av_rescale_q(1, av_inv_q(m_frame_rate), { 1, AV_TIME_BASE });
     }
 
     m_vStream2.reset(new AVDemuxer());
@@ -161,7 +134,202 @@ int MergerCtx::openInputStreams(const char *file1, const char *file2)
         }
     }
 
-    return ret;
+    
+    return correctTimestamp(file1, file2);
+}
+
+int MergerCtx::correctTimestamp(const char *file1, const char *file2) {
+
+    int ret = 0;
+    unique_ptr<AVDemuxer> small_stream = unique_ptr<AVDemuxer>(new AVDemuxer());
+    unique_ptr<AVDemuxer> large_stream = unique_ptr<AVDemuxer>(new AVDemuxer());
+
+    if (small_stream->openInputFormat(file1) < 0) {
+        small_stream.reset();
+        return -1;
+    }
+
+    if (large_stream->openInputFormat(file2) < 0) {
+        large_stream.reset();
+        return -1;
+    }
+
+    std::multimap<int64_t, VideoPadding> segment_info;
+    {
+        AVDictionaryEntry *e = small_stream->getMetadata("comment", nullptr);
+        if (e != nullptr) {
+            std::string value(e->value);
+            auto tokens = split(value.c_str(), ',');
+            for (auto &clip : tokens) {
+                if (clip.size() < 2)
+                    continue;
+                auto duration = split(clip.c_str(), ':');
+                int64_t start = std::stoll(duration.at(0));
+                int64_t end = std::stoll(duration.at(1));
+                segment_info.insert(std::make_pair(start, VideoPadding(InsertType::LargeInSmall, start, end)));
+            }
+        }
+        AVDictionaryEntry *des = small_stream->getMetadata("description", nullptr);
+        if (des != nullptr) {
+            std::string value(des->value);
+            const char *prefix = "offset:";
+            auto index = value.find(prefix);
+            if (index != std::string::npos) {
+                m_small_offset = std::stoll(value.substr(index + strlen(prefix)));
+            }
+        }
+
+        for (auto &segmentInfo : probe_sei_info(file2)) {
+            segmentInfo.second.start_pts -= m_small_offset;
+            segmentInfo.second.end_pts -= m_small_offset;
+            segment_info.insert(std::make_pair(segmentInfo.second.start_pts,
+                VideoPadding(InsertType::Large, segmentInfo.second.start_pts, segmentInfo.second.end_pts)));
+        }
+    }
+
+
+
+    auto read_video = [](AVDemuxer *demuxer, AVPacket *packet) {
+        int ret = 0;
+        while (true) {
+            av_packet_unref(packet);
+            ret = demuxer->readPacket(packet);
+            if (ret < 0)
+                break;
+            if (demuxer->getStream(packet->stream_index)->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+                break;
+        }
+        return ret;
+    };
+
+    while (true)
+    {
+        std::unique_ptr<AVPacket, AVPacketDeleter> packet_l(av_packet_alloc());
+        ret = read_video(large_stream.get(), packet_l.get());
+        if (ret < 0)
+            break;
+        
+        
+        std::unique_ptr<AVPacket, AVPacketDeleter> packet_s(av_packet_alloc());
+        int64_t previous_pts = AV_NOPTS_VALUE;
+        while (true)
+        {
+            int64_t s_pts = AV_NOPTS_VALUE;
+            ret = read_video(small_stream.get(), packet_s.get());
+            if(ret < 0)
+                break;
+
+            //correct large pts in small
+            if (previous_pts != AV_NOPTS_VALUE) {
+                for (auto it = segment_info.begin(); it != segment_info.end(); it++) {
+                    auto info = *it;
+                    if (info.second.streamType == InsertType::LargeInSmall) {
+                        int64_t start = info.second.start_pts;
+                        int64_t middle = (previous_pts + packet_s->pts) / 2;
+                        if (start > previous_pts && start < packet_s->pts) {
+                            if (start <= middle) {
+                                info.second.start_pts = previous_pts;
+                            }
+                            else {
+                                info.second.start_pts = packet_s->pts;
+                            }
+                            segment_info.erase(it);
+                            segment_info.insert(std::make_pair(info.second.start_pts, info.second));
+                            LOGW("modify large pts in small. start position %lld ==> %lld\n", start, info.second.start_pts);
+                            break;
+                        }
+
+                        int64_t end = info.second.end_pts;
+                        if (end > previous_pts && end < packet_s->pts) {
+                            if (start <= middle) {
+                                it->second.end_pts = previous_pts;
+                            }
+                            else {
+                                it->second.end_pts = packet_s->pts;;
+                            }
+                            LOGW("modify large pts in small. end position %lld ==> %lld\n", end, it->second.end_pts);
+                            break;
+                        }
+                    }
+                }
+            }
+            previous_pts = packet_s->pts;
+
+            for (const auto info : segment_info) {
+                if (info.second.streamType == InsertType::Large) {
+                    int64_t start = info.second.start_pts - m_frame_duration * Flexible;
+                    int64_t end = info.second.end_pts + m_frame_duration * Flexible;
+                    if (packet_s->pts > start && packet_s->pts < end) {
+                        s_pts = packet_s->pts;
+                        break;
+                    }
+                }
+            }
+            if (s_pts != AV_NOPTS_VALUE) {
+                break;
+            }
+        }
+        if (ret < 0)
+            break;
+
+        int64_t l_pts = packet_l->pts - m_small_offset;
+        int64_t differ = llabs(packet_s->pts - l_pts);
+        if (differ >= m_frame_duration * Flexible) {
+            LOGW("pst in small is %lld , in large is %lld, offset is too large %lld\n", packet_s->pts, l_pts, differ);
+        }
+        //first value is large timestamp, second is  offset;
+        m_large_correct.push_back(std::make_pair(packet_l->pts, packet_s->pts - packet_l->pts));
+    }// while (true)
+
+    for (const auto info : segment_info) {
+        InsertType type = info.second.streamType;
+        if (type == InsertType::Large) {
+            segment_info.erase(info.first);
+            int64_t start = m_large_correct.front().first + m_large_correct.front().second;
+            int64_t end = m_large_correct.back().first + m_large_correct.back().second;
+            segment_info.insert(std::make_pair(start, VideoPadding(InsertType::Large, start, end)));
+            break;
+        }
+    }
+
+    {
+        for (const auto info : segment_info) {
+            if (m_segment_info.size() == 0) {
+                m_segment_info.insert(info);
+            }
+            else {
+                const auto & previous = m_segment_info.find(info.first);
+                if (previous == m_segment_info.end()) {
+                    m_segment_info.insert(info);
+                    continue;
+                }
+                if (previous->second.end_pts < info.second.end_pts) {
+                    m_segment_info.erase(info.first);
+                    m_segment_info.insert(info);
+                }
+            }
+        }
+
+        for (auto it = m_segment_info.begin(); it != m_segment_info.end(); it++) {
+            auto next = std::next(it);
+            if (next != m_segment_info.end()) {
+                if (it->second.end_pts < next->second.start_pts) {
+                    it->second.write_end_pts = it->second.end_pts;
+                }
+                else {
+                    it->second.write_end_pts = next->second.start_pts - m_frame_duration;
+                }
+            }
+            else {
+                it->second.write_end_pts = it->second.end_pts;
+            }
+            LOGI("large clip duration info [%lld  %lld] type %d\n", it->second.start_pts, it->second.end_pts, it->second.streamType);
+        }
+    
+    }
+
+
+    return 0;
 }
 
 int MergerCtx::openOutputFile(const char *file) 
@@ -178,8 +346,6 @@ int MergerCtx::cfgCodec()
     int ret = -1;
     auto param = m_vStream1->getCodecParameters(AVMEDIA_TYPE_VIDEO);
     if (param) {
-        m_frame_rate = { m_vStream1->video_codecParam.frame_rate_num , m_vStream1->video_codecParam.frame_rate_den };
-        m_frame_duration = av_rescale_q(1, av_inv_q(m_frame_rate), { 1, AV_TIME_BASE });
         m_decodeV.reset(new AVDecoder());
         m_decodeV->cfgCodec(param);
         auto decode_src = m_vStream1->getStream(AVMEDIA_TYPE_VIDEO)->codec;
@@ -291,12 +457,12 @@ int MergerCtx::getVideoFrame(AVDemuxer *demuxer, AVDecoder *decoder, AVFrame *fr
                 av_packet_rescale_ts(packet.get(), time_base, { 1, AV_TIME_BASE });
                 int64_t pts = packet->pts;
                 bool use_large = false;
-                for (auto &bitrateInfo : m_sei_info1) {
-                    VStreamType type = bitrateInfo.second.streamType;
-                    int64_t pts_start = bitrateInfo.second.start_pts - m_frame_duration * Flexible;
-                    int64_t pts_end = bitrateInfo.second.end_pts - m_frame_duration * (1 - Flexible);
+                for (const auto &info : m_segment_info) {
+                    InsertType type = info.second.streamType;
+                    int64_t pts_start = info.second.start_pts - m_frame_duration * Flexible;
+                    int64_t pts_end = info.second.write_end_pts + m_frame_duration * Flexible;
                     if (pts > pts_start && pts < pts_end) {
-                        use_large = type == VStreamType::LARGE ? true : false;
+                        use_large = type == InsertType::LargeInSmall ? true : false;
                         break;
                     }
                 }
@@ -326,7 +492,12 @@ int MergerCtx::getVideoFrame(AVDemuxer *demuxer, AVDecoder *decoder, AVFrame *fr
 int MergerCtx::insertVideoPacket(AVPacket *packet){
     //LOGE("insert pts: %lld   dts: %lld  %d\n", packet->pts, packet->dts, packet->flags);
     for (auto iterator = m_packet_queue.cbegin(); iterator != m_packet_queue.cend(); iterator++) {
+  
         if ((*iterator)->dts > packet->dts) {
+            if ((*iterator)->dts - packet->dts < m_frame_duration * Flexible) {
+                LOGW("warring  insert pts  %lld, next pts %lld, diff %lld\n", 
+                    packet->dts, (*iterator)->dts, (*iterator)->dts - packet->dts);
+            }
             m_packet_queue.insert(iterator, std::unique_ptr<AVPacket, AVPacketDeleter>(packet));
             packet = nullptr;
             break;
@@ -341,27 +512,16 @@ int MergerCtx::insertVideoPacket(AVPacket *packet){
 void MergerCtx::writeVideoPacket(AVPacket *packet) {
 
     int64_t pts = packet->pts;
-
     bool insert_small = true;
-    for (auto &bitrateInfo : m_sei_info1) {
-        VStreamType type = bitrateInfo.second.streamType;
-        int64_t pts_start = bitrateInfo.second.start_pts - m_frame_duration * Flexible;
-        int64_t pts_end = bitrateInfo.second.end_pts - m_frame_duration * (1 - Flexible);
+    for (const auto &info : m_segment_info) {
+        InsertType type = info.second.streamType;
+        int64_t pts_start = info.second.start_pts - m_frame_duration * Flexible;
+        int64_t pts_end = info.second.write_end_pts + m_frame_duration * Flexible;
         if (pts > pts_start && pts < pts_end) {
-            insert_small = type == VStreamType::LARGE ? false : true;
+            insert_small = type != InsertType::Small ? false : true;
             break;
         }
     }
-    for (auto &bitrateInfo : m_sei_info2) {
-        VStreamType type = bitrateInfo.second.streamType;
-        int64_t pts_start = bitrateInfo.second.start_pts - m_frame_duration * Flexible;
-        int64_t pts_end = bitrateInfo.second.end_pts - m_frame_duration * (1 - Flexible);
-        if (pts > pts_start && pts < pts_end) {
-            insert_small = type == VStreamType::LARGE ? false : true;
-            break;
-        }
-    }
-
 
     if (insert_small) {
         insertVideoPacket(packet);
@@ -370,13 +530,14 @@ void MergerCtx::writeVideoPacket(AVPacket *packet) {
 
     readSlicePacket(pts);
     if (m_packet_queue.size() > 0) {
-        auto pkt = m_packet_queue.begin();
-        auto pts = (*pkt)->pts;
-        //LOGE("write pts: %lld   dts: %lld  %d\n", (*pkt)->pts, (*pkt)->dts, (*pkt)->flags);
-        m_output->writePacket(m_packet_queue.front().release());
+        auto pkt = std::move(m_packet_queue.front());
         m_packet_queue.pop_front();
+        auto vpts = pkt->pts;
+        //LOGE("write pts: %lld   dts: %lld  %d\n", (*pkt)->pts, (*pkt)->dts, (*pkt)->flags);
+        m_output->writePacket(pkt.get());
+        
         if (m_aStream1)
-            writeAudioPacket(m_aStream1.get(), m_output.get(), pts, m_audioIndex);
+            writeAudioPacket(m_aStream1.get(), m_output.get(), vpts, m_audioIndex);
     }
 }
 
@@ -424,24 +585,30 @@ int MergerCtx::frameScale(AVFrame *frame) {
 
 
 int MergerCtx::readSlicePacket(int64_t small_pts) {
-    bool use2 = false;
+    bool use_large = false;
     int ret = 0;
-    for (auto bitrateInfo : m_sei_info2) {
-        VStreamType type = bitrateInfo.second.streamType;
-        int64_t pts_start = bitrateInfo.second.start_pts - m_frame_duration * Flexible;;
-        int64_t pts_end = bitrateInfo.second.end_pts - m_frame_duration * (1 - Flexible);
+    for (const auto &segmentInfo : m_segment_info) {
+        InsertType type = segmentInfo.second.streamType;
+        int64_t pts_start = segmentInfo.second.start_pts - m_frame_duration * Flexible;
+        int64_t pts_end = segmentInfo.second.write_end_pts + m_frame_duration * Flexible;
         if (small_pts > pts_start && small_pts < pts_end) {
-            use2 = type == VStreamType::LARGE ? true : false;
+            use_large = type == InsertType::Large ? true : false;
             break;
         }
     }
 
-    if (use2) {
+
+    if (use_large) {
         std::unique_ptr<AVPacket, AVPacketDeleter> packet(av_packet_alloc());
         while (true) {
             ret = m_vStream2->readPacket(packet.get());
-            if (ret < 0)
+            if (ret < 0) {
+                if (m_large_correct.size() > 0) {
+                    LOGW("large file read end, but left %lld data in queue\n", m_large_correct.size());
+                }
                 break;
+            }
+                
             if (m_vStream2->getStream(packet->stream_index)->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
                 break;
         }
@@ -449,9 +616,23 @@ int MergerCtx::readSlicePacket(int64_t small_pts) {
             if (mp4H264_bsf) {
                 applyBitstream(mp4H264_bsf.get(), packet.get());
             }
+            
+            int64_t offset = -m_small_offset;
+            if (m_large_correct.size() > 0) {
+                auto pair_pts = m_large_correct.front();
+                m_large_correct.pop_front();
+                offset = pair_pts.second;
+                if (pair_pts.first != packet->pts) {
+                    LOGW("probe pts %lld don't equal true pts %lld \n", pair_pts.first, packet->pts);
+                }
+            }
+            else {
+                LOGW("large file also has video data, but no data in queue\n");
+            }
+
             packet->stream_index = m_videIndex;
-            packet->pts += m_slice_offset;
-            packet->dts += m_slice_offset;
+            packet->pts += offset;
+            packet->dts += offset;
             insertVideoPacket(packet.release());
         }
     }
@@ -485,42 +666,26 @@ int MergerCtx::encodeWriteFrame(AVEncoder *encoder, AVFrame *frame) {
 
 
 void MergerCtx::genCommentInfo(std::map<int64_t, VideoPadding> &sei_info) {
-
-    auto insert_fun = [&sei_info](std::pair<int64_t, VideoPadding>info) {
-        if (sei_info.find(info.first) == sei_info.end()) {
-            sei_info.insert(std::make_pair(info.second.start_pts,
-                VideoPadding(VStreamType::LARGE, info.second.start_pts, info.second.end_pts)));
-        }
-        else {
-            auto exist_info = sei_info.find(info.first)->second;
-            if (exist_info.end_pts - exist_info.start_pts < info.second.end_pts - info.second.start_pts) {
-                sei_info.insert(std::make_pair(info.second.start_pts,
-                    VideoPadding(VStreamType::LARGE, info.second.start_pts, info.second.end_pts)));
-            }
-        }
-    };
-
-    std::for_each(m_sei_info1.begin(), m_sei_info1.end(), insert_fun);
-    std::for_each(m_sei_info2.begin(), m_sei_info2.end(), insert_fun);
-
     std::map<int64_t, VideoPadding> clip_info;
-    for (auto info : sei_info) {
+    for (auto info : m_segment_info) {
         if (clip_info.size() == 0) {
+            //info.second.end_pts += m_frame_duration;
             clip_info.insert(info);
             continue;
         }
         auto clip1 = (--clip_info.end())->second;
         auto clip2 = info.second;
-        if (clip1.end_pts < clip2.start_pts) {
+        if (clip1.end_pts + m_frame_duration < clip2.start_pts) {
+            //info.second.end_pts += m_frame_duration;
             clip_info.insert(info);
         }
         else if (clip1.end_pts < clip2.end_pts) {
             clip_info.erase(clip1.start_pts);
-            clip_info.emplace(std::make_pair(clip1.start_pts, VideoPadding(VStreamType::LARGE, clip1.start_pts, clip2.end_pts)));
+            clip_info.emplace(std::make_pair(clip1.start_pts, VideoPadding(InsertType::Large, clip1.start_pts, clip2.end_pts)));
+            //clip_info.emplace(std::make_pair(clip1.start_pts, VideoPadding(InsertType::Large, clip1.start_pts, clip2.end_pts + m_frame_duration)));
         }
     
     }
-
     sei_info = clip_info;
 }
 
@@ -534,6 +699,10 @@ void MergerCtx::setCommentInfo() {
         snprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer), "%lld:%lld,", info.second.start_pts, info.second.end_pts);
     }
     m_output->setMetaDate("comment", buffer);
+
+    memset(buffer, 0, sizeof(buffer));
+    snprintf(buffer, sizeof(buffer), "offset:%lld", m_small_offset);
+    m_output->setMetaDate("description", buffer);
 }
 
 int MergerCtx::mergerLoop() {
@@ -554,9 +723,6 @@ int MergerCtx::mergerLoop() {
     if (m_aStream1)
         m_audioIndex = m_output->addStream(m_aStream1->getCodecParameters(AVMEDIA_TYPE_AUDIO));
     
-    setCommentInfo();
-
-
     if (m_output->writeHeader() < 0)
         return ret;
 
@@ -567,43 +733,20 @@ int MergerCtx::mergerLoop() {
         if (ret < 0)
             break;
         frame->pict_type = AV_PICTURE_TYPE_NONE;
-        for (auto bitrateInfo : m_sei_info1) {
-            VStreamType type = bitrateInfo.second.streamType;
-            int64_t pts_start = bitrateInfo.second.start_pts;
-            int64_t pts_end = bitrateInfo.second.end_pts;
-            if (type == VStreamType::LARGE) {
-                if ((frame->pts <= pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
-                    (frame->pts <= pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
+        for (const auto &segmentInfo : m_segment_info) {
+            InsertType type = segmentInfo.second.streamType;
+            int64_t pts_start = segmentInfo.second.start_pts;
+            int64_t pts_end = segmentInfo.second.end_pts;
+            int64_t offset = m_frame_duration * Flexible;
+ 
+            if (type != InsertType::Small) {
+                auto aa = (frame->pts + frame->pkt_duration);
+                auto bb = (frame->pts - frame->pkt_duration - offset);
+                if ((frame->pts <= pts_start && (frame->pts + frame->pkt_duration + offset) > pts_start) ||
+                    (frame->pts - frame->pkt_duration - offset < pts_end && frame->pts >= pts_end)) {
                     frame->pict_type = AV_PICTURE_TYPE_I;
-                };
-            }
-        }
-
-        for (const auto &bitrateInfo : m_sei_info2) {
-            VStreamType type = bitrateInfo.second.streamType;
-            const int64_t &pts_start = bitrateInfo.second.start_pts;
-            const int64_t &pts_end = bitrateInfo.second.end_pts;
-
-            if (m_slice_offset == 0) {
-                if ((frame->pts < pts_start && (frame->pts + frame->pkt_duration) > pts_start)) {
-                    if ((frame->pts * 2 + frame->pkt_duration) / 2 < pts_start) {
-                        m_slice_offset = (frame->pts + frame->pkt_duration) - pts_start;
-                    }
-                    else {
-                        m_slice_offset = pts_start - frame->pts;
-                    }
-                    for (auto &bitrateInfo : m_sei_info2) {
-                        bitrateInfo.second.start_pts += m_slice_offset;
-                        bitrateInfo.second.end_pts += m_slice_offset;
-                    }
-                    setCommentInfo();
-                }
-            }
-
-            if (type == VStreamType::LARGE) {
-                if ((frame->pts <= pts_start && (frame->pts + frame->pkt_duration) > pts_start) ||
-                    (frame->pts <= pts_end && (frame->pts + frame->pkt_duration) > pts_end)) {
-                    frame->pict_type = AV_PICTURE_TYPE_I;
+                    //LOGI("insert key packet  %lld \n", frame->pts);
+                    break;
                 };
             }
         }
@@ -630,6 +773,7 @@ int MergerCtx::mergerLoop() {
         packet->duration = m_frame_duration;
         writeVideoPacket(packet.release());
     }
+    setCommentInfo();
     if (m_aStream1)
         writeAudioPacket(m_aStream1.get(), m_output.get(), AV_NOPTS_VALUE, m_audioIndex);
     ret = m_output->closeOutputForamt();

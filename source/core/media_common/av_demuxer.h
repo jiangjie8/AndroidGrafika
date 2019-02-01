@@ -47,6 +47,9 @@ public:
             return m_inputFormat->streams[index];
         return nullptr;
     }
+    AVDictionaryEntry* getMetadata(const char *key, const AVDictionaryEntry *prev) {
+        return av_dict_get(m_inputFormat->metadata, key, prev, AV_DICT_MATCH_CASE);
+    }
     int readPacket(AVPacket *packet);
 
     void closeInputFormat() {

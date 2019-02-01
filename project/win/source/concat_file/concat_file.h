@@ -28,18 +28,19 @@ namespace av {
 constexpr const char *VP_SMALL = "vp_small";
 constexpr const char *VP_LARGER = "vp_larger";
 
-enum class VStreamType : uint8_t
+enum class InsertType :uint8_t
 {
-    UNKnow,
-    SMALL,
-    LARGE
+    Small,
+    LargeInSmall,
+    Large
 };
 
 typedef struct VideoPadding {
-    VStreamType streamType = VStreamType::UNKnow;
-    int64_t start_pts = AV_NOPTS_VALUE;
-    int64_t end_pts = AV_NOPTS_VALUE;
-    VideoPadding(VStreamType type, int64_t startpts, int64_t endpts) :
+    InsertType streamType = InsertType::Small;
+    int64_t start_pts{ AV_NOPTS_VALUE };
+    int64_t end_pts{ AV_NOPTS_VALUE };
+    int64_t write_end_pts{ AV_NOPTS_VALUE };
+    VideoPadding(InsertType type, int64_t startpts, int64_t endpts) :
         streamType(type), start_pts(startpts), end_pts(endpts)
     {
     }
@@ -76,8 +77,7 @@ private:
     unique_ptr<AVMuxer> m_output{ nullptr };
     unique_ptr<AVEncoder> m_encodeV{ nullptr };
 
-    std::map<int64_t, VideoPadding> m_sei_info1;
-    std::map<int64_t, VideoPadding> m_sei_info2;
+    std::map<int64_t, VideoPadding> m_segment_info;
 
     std::unique_ptr<AVBSFContext, AVBSFContextDeleter> mp4H264_bsf{ nullptr };
 
@@ -85,7 +85,8 @@ private:
     int64_t m_frame_duration{ 0 };
     int m_videIndex{ -1 };
     int m_audioIndex{ -1 };
-    int64_t m_slice_offset{ 0 };
+    int64_t m_small_offset{ 0 };
+    std::deque<std::pair<int64_t, int64_t>> m_large_correct;
 
     std::list<std::unique_ptr<AVPacket, AVPacketDeleter>> m_packet_queue;
     void writeVideoPacket(AVPacket *packet);
@@ -99,6 +100,8 @@ private:
 
     void genCommentInfo(std::map<int64_t, VideoPadding> &sei_info);
     void setCommentInfo();
+
+    int correctTimestamp(const char *file1, const char *file2);
 };
 
 typedef struct CommandCtx
@@ -109,6 +112,7 @@ typedef struct CommandCtx
     std::string vcodec;
 
 }CommandCtx;
+
 static CommandCtx command_t;
 
 static void print_help() {

@@ -228,7 +228,7 @@ namespace av{
             m_timestamp_start = packet->pts;
             char offset[64] = {0};
             snprintf(offset, sizeof(offset), "offset:%lld", m_timestamp_start);
-            m_muxer->setMetaDate("Description", offset);
+            m_muxer->setMetaDate("description", offset);
         }
         if(m_timestamp_start == AV_NOPTS_VALUE){
             return AVERROR_UNKNOWN;
