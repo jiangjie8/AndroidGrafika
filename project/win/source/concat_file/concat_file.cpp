@@ -2,7 +2,7 @@
 
 //constexpr char *Small_LOGO = "./smallFlag.png";
 constexpr char *Small_LOGO = "/opt/vcloud/smallFlag.png";
-constexpr float Flexible = 0.2;
+constexpr float Flexible = 0.25;
 namespace av {
 std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
 
@@ -258,8 +258,8 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2) {
 
             for (const auto info : segment_info) {
                 if (info.second.streamType == InsertType::Large) {
-                    int64_t start = info.second.start_pts - m_frame_duration * Flexible;
-                    int64_t end = info.second.end_pts + m_frame_duration * Flexible;
+                    int64_t start = info.second.start_pts - m_frame_duration * 0.5;
+                    int64_t end = info.second.end_pts + m_frame_duration * 0.5;
                     if (packet_s->pts > start && packet_s->pts < end) {
                         s_pts = packet_s->pts;
                         break;
@@ -534,7 +534,7 @@ void MergerCtx::writeVideoPacket(AVPacket *packet) {
         auto pkt = std::move(m_packet_queue.front());
         m_packet_queue.pop_front();
         auto vpts = pkt->pts;
-        //LOGE("write pts: %lld   dts: %lld  %d\n", (*pkt)->pts, (*pkt)->dts, (*pkt)->flags);
+        //LOGE("write video packet. pts: %lld   dts: %lld  %d\n", (*pkt)->pts, (*pkt)->dts, (*pkt)->flags);
         m_output->writePacket(pkt.get());
         
         if (m_aStream1)
@@ -558,6 +558,7 @@ int MergerCtx::writeAudioPacket(AVDemuxer *input, AVMuxer  *output, int64_t pts_
             int64_t pts = packet->pts;
             int64_t duration = packet->duration;
             packet->stream_index = index;
+            //LOGE("write audio packet. pts: %lld   dts: %lld  %d\n", packet->pts, packet->dts, packet->flags);
             output->writePacket(packet.get());
             if (pts + duration >= pts_flag && pts_flag != AV_NOPTS_VALUE) {
                 break;
@@ -626,15 +627,15 @@ int MergerCtx::readSlicePacket(int64_t small_pts) {
                 if (pair_pts.first != packet->pts) {
                     LOGW("probe pts %lld don't equal true pts %lld \n", pair_pts.first, packet->pts);
                 }
+                packet->stream_index = m_videIndex;
+                packet->pts += offset;
+                packet->dts += offset;
+                insertVideoPacket(packet.release());
+
             }
             else {
                 LOGW("large file also has video data, but no data in queue\n");
             }
-
-            packet->stream_index = m_videIndex;
-            packet->pts += offset;
-            packet->dts += offset;
-            insertVideoPacket(packet.release());
         }
     }
     return 0;
