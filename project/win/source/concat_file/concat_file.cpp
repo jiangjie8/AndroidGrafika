@@ -1,6 +1,7 @@
 #include "concat_file.h"
 
-constexpr char *Small_LOGO = "./smallFlag.png";
+//constexpr char *Small_LOGO = "./smallFlag.png";
+constexpr char *Small_LOGO = "/opt/vcloud/smallFlag.png";
 constexpr float Flexible = 0.2;
 namespace av {
 std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
