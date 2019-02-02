@@ -86,6 +86,7 @@ private:
     int m_videIndex{ -1 };
     int m_audioIndex{ -1 };
     int64_t m_small_offset{ 0 };
+    int64_t m_previous_audio_pts{ AV_NOPTS_VALUE };
     std::deque<std::pair<int64_t, int64_t>> m_large_correct;
 
     std::list<std::unique_ptr<AVPacket, AVPacketDeleter>> m_packet_queue;

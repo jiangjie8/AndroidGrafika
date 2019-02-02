@@ -242,7 +242,7 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2) {
 
                         int64_t end = info.second.end_pts;
                         if (end > previous_pts && end < packet_s->pts) {
-                            if (start <= middle) {
+                            if (end <= middle) {
                                 it->second.end_pts = previous_pts;
                             }
                             else {
@@ -537,8 +537,10 @@ void MergerCtx::writeVideoPacket(AVPacket *packet) {
         //LOGE("write video packet. pts: %lld   dts: %lld  %d\n", (*pkt)->pts, (*pkt)->dts, (*pkt)->flags);
         m_output->writePacket(pkt.get());
         
-        if (m_aStream1)
+        if (m_aStream1 && 
+            (m_previous_audio_pts == AV_NOPTS_VALUE || m_previous_audio_pts < vpts)) {
             writeAudioPacket(m_aStream1.get(), m_output.get(), vpts, m_audioIndex);
+        }
     }
 }
 
@@ -558,6 +560,7 @@ int MergerCtx::writeAudioPacket(AVDemuxer *input, AVMuxer  *output, int64_t pts_
             int64_t pts = packet->pts;
             int64_t duration = packet->duration;
             packet->stream_index = index;
+            m_previous_audio_pts = pts;
             //LOGE("write audio packet. pts: %lld   dts: %lld  %d\n", packet->pts, packet->dts, packet->flags);
             output->writePacket(packet.get());
             if (pts + duration >= pts_flag && pts_flag != AV_NOPTS_VALUE) {
@@ -776,8 +779,9 @@ int MergerCtx::mergerLoop() {
         writeVideoPacket(packet.release());
     }
     setCommentInfo();
-    if (m_aStream1)
+    if (m_aStream1) {
         writeAudioPacket(m_aStream1.get(), m_output.get(), AV_NOPTS_VALUE, m_audioIndex);
+    }
     ret = m_output->closeOutputForamt();
     return ret;
 }
