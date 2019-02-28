@@ -473,6 +473,7 @@ public class AVMediaRecode implements AVRecodeInterface {
 
         int quality = 80;
         GlRectDrawer glRectDrawer = null;
+        BufferedOutputStream bos = null;
         try {
             ByteBuffer buf = ByteBuffer.allocateDirect(width * height * 4);
             buf.order(ByteOrder.LITTLE_ENDIAN);
@@ -491,19 +492,27 @@ public class AVMediaRecode implements AVRecodeInterface {
             }
             flip_buffer.rewind();
 
-            BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(name));
+
             Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            bos = new BufferedOutputStream(new FileOutputStream(name));
             bmp.copyPixelsFromBuffer(flip_buffer);
             bmp.compress(Bitmap.CompressFormat.JPEG, quality, bos);
             bmp.recycle();
-            bos.close();
         }catch (Exception e){
             Logging.e(TAG, "new thumbnail error", e);
         }
         finally {
-            if(glRectDrawer != null){
-                glRectDrawer.release();
+            if(bos != null){
+                try {
+                    bos.close();
+                } catch (IOException e) {
+                    Logging.e(TAG, "BufferedOutputStream close error", e);
+                }
             }
+        }
+
+        if(glRectDrawer != null){
+            glRectDrawer.release();
         }
 
     }
