@@ -11,7 +11,8 @@ public interface AVRecodeInterface {
 
     public boolean openInputSource(String input);
     public boolean setOutputSourceParm(String clipDirectory, String clipPrefix,
-                            int clipWidth, int clipHeight, int clipBitrate, int clipDurationMs);
+                                       int clipWidth, int clipHeight, int clipBitrate, int clipDurationMs,
+                                       int thumbnailWidth, int thumbnailHeight);
     public void setRecodeEventListener(onRecodeEventListener listener);
     public void starRecode();
     public void stopRecode();

@@ -1,15 +1,19 @@
 package apprtc.org.grafika.media;
 
+import android.graphics.Bitmap;
 import android.media.MediaFormat;
+import android.opengl.GLES20;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -19,6 +23,8 @@ import apprtc.org.grafika.JNIBridge;
 import apprtc.org.grafika.Logging;
 import apprtc.org.grafika.gles.EglBase;
 import apprtc.org.grafika.gles.EglBase14;
+import apprtc.org.grafika.gles.GlRectDrawer;
+import apprtc.org.grafika.gles.GlUtil;
 import apprtc.org.grafika.media.AVStruct.*;
 
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_AVC;
@@ -52,6 +58,7 @@ public class AVMediaRecode implements AVRecodeInterface {
     private int mErrorCode = 0;
 
     private String tempOutputFile = "";
+    private String thumbnailName = null;
 
     private String inputSource;
     private String clipDirectory;
@@ -61,6 +68,8 @@ public class AVMediaRecode implements AVRecodeInterface {
     private int clipHeight = 0;
     private int clipDurationMs;
     private int clipIndex = 0;
+    private int thumbnailWidth = 0;
+    private int thumbnailHeight = 0;
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private onRecodeEventListener eventListener = null;
@@ -342,6 +351,23 @@ public class AVMediaRecode implements AVRecodeInterface {
             return false;
 
         boolean ret = mVideoEncoder.sendFrame(oesTextureId, transformationMatrix, presentationTimestampUs);
+
+        if(ret ){
+            String name =  tempOutputFile.substring(0, tempOutputFile.lastIndexOf(".")) + ".jpg";
+            if(thumbnailName == null || !thumbnailName.equals(name)){
+
+                if(thumbnailHeight == -1 && mMediaInfo.height > 0 && mMediaInfo.width > 0){
+                    thumbnailHeight =  thumbnailWidth * mMediaInfo.height / mMediaInfo.width;
+                }
+                else{
+                    thumbnailHeight = thumbnailWidth * clipHeight / clipWidth;
+                }
+
+                thumbnailName = name;
+                newThumbnail( thumbnailName, thumbnailWidth, thumbnailHeight, oesTextureId, transformationMatrix);
+            }
+        }
+
         while (ret) {
             AVPacket pkt = null;
             CodecBufferInfo bufferinfo = mVideoEncoder.receivePacket();
@@ -438,12 +464,54 @@ public class AVMediaRecode implements AVRecodeInterface {
     }
 
 
+    private void newThumbnail(String name, int width, int height, int oesTextureId, float[] transformationMatrix){
+        int quality = 80;
+        try {
+            if(new File(name).exists()){
+                Logging.i(TAG, "thumbnail exist.");
+                return;
+            }
+
+
+
+            ByteBuffer buf = ByteBuffer.allocateDirect(width * height * 4);
+            buf.order(ByteOrder.LITTLE_ENDIAN);
+            GlRectDrawer glRectDrawer = new GlRectDrawer();
+            glRectDrawer.drawOes(oesTextureId, transformationMatrix, width, height, 0, 0, width, height);
+            GLES20.glReadPixels(0, 0, width, height,
+                    GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, buf);
+            GlUtil.checkNoGLES2Error("glReadPixels");
+
+            buf.rewind();
+            ByteBuffer flip_buffer = ByteBuffer.allocateDirect(width * height * 4);
+            buf.order(ByteOrder.LITTLE_ENDIAN);
+            for(int i = height - 1; i >= 0; i--){
+                buf.get(flip_buffer.array(), i * width * 4,width*4);
+            }
+            flip_buffer.rewind();
+
+            BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(name));
+            Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            bmp.copyPixelsFromBuffer(flip_buffer);
+            bmp.compress(Bitmap.CompressFormat.JPEG, quality, bos);
+            bmp.recycle();
+            bos.close();
+        }catch (Exception e){
+            Logging.e(TAG, "new thumbnail error", e);
+        }
+
+    }
+
+
     @Override
-    public boolean setOutputSourceParm(String clipDirectory, String clipPrefix, int clipWidth, int clipHeight, int clipBitrate, int clipDurationMs) {
+    public boolean setOutputSourceParm(String clipDirectory, String clipPrefix, int clipWidth, int clipHeight, int clipBitrate, int clipDurationMs,
+                                       int thumbnailWidth, int thumbnailHeight) {
         this.clipPrefix = clipPrefix;
         this.clipDurationMs = clipDurationMs;
         this.clipWidth = clipWidth;
         this.clipHeight = clipHeight;
+        this.thumbnailWidth = thumbnailWidth;
+        this.thumbnailHeight = thumbnailHeight;
         this.clipBitrate = clipBitrate;
         this.clipDirectory = clipDirectory;
         if(clipDirectory.charAt(clipDirectory.length() -1) != File.separatorChar){

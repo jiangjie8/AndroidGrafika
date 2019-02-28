@@ -35,13 +35,22 @@ public class RecodeMediaActivity extends AppCompatActivity {
 
     void startRecoder() {
         mediaRecode = AVRecodeInterface.getRecodeInstance();
-        mediaRecode.openInputSource("/sdcard/Download/2k.mp4");
-        File d = new File("/sdcard/Download/jie");
-        if (!d.exists()) {
-            d.mkdirs();
+        mediaRecode.openInputSource("/sdcard/Download/video.mp4");
+        File dir = new File("/sdcard/Download/jie");
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        else{
+            if (dir.isDirectory()) {
+                String[] childrens = dir.list();
+                for (String child : childrens) {
+                    new File(dir, child).delete();
+                }
+            }
         }
         mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "t_hevc_5m-%03d.mp4",
-                1920, 1080, (int)(1.5 * 1024), 10000);
+                960, 540, (int)(1.5 * 1024), 10000,
+                540, -1);
 //        mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "hevc_1088p_2000kb-%03d.mp4",
 //                1920, 1088, 2000, 100000);
         mediaRecode.setRecodeEventListener(new AVRecodeInterface.onRecodeEventListener() {
