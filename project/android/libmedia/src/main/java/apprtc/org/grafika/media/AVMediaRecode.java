@@ -465,18 +465,19 @@ public class AVMediaRecode implements AVRecodeInterface {
 
 
     private void newThumbnail(String name, int width, int height, int oesTextureId, float[] transformationMatrix){
+
+        if(new File(name).exists()){
+            Logging.i(TAG, "thumbnail exist.");
+            return;
+        }
+
         int quality = 80;
+        GlRectDrawer glRectDrawer = null;
         try {
-            if(new File(name).exists()){
-                Logging.i(TAG, "thumbnail exist.");
-                return;
-            }
-
-
-
             ByteBuffer buf = ByteBuffer.allocateDirect(width * height * 4);
             buf.order(ByteOrder.LITTLE_ENDIAN);
-            GlRectDrawer glRectDrawer = new GlRectDrawer();
+
+            glRectDrawer = new GlRectDrawer();
             glRectDrawer.drawOes(oesTextureId, transformationMatrix, width, height, 0, 0, width, height);
             GLES20.glReadPixels(0, 0, width, height,
                     GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, buf);
@@ -498,6 +499,11 @@ public class AVMediaRecode implements AVRecodeInterface {
             bos.close();
         }catch (Exception e){
             Logging.e(TAG, "new thumbnail error", e);
+        }
+        finally {
+            if(glRectDrawer != null){
+                glRectDrawer.release();
+            }
         }
 
     }
