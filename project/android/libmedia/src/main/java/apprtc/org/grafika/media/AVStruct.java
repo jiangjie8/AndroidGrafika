@@ -31,12 +31,13 @@ public class AVStruct {
         public long duration = 0;
         public long startTime = 0;
 
-        public int videoCodecID;
+        public int videoCodecID = -1;
         public int width = 0;
         public int height = 0;
         public int framerate = 0;
+        public int pixfmt = -1;
 
-        public int audioCodecID;
+        public int audioCodecID = -1;
         public int channels = 0;
         public int sampleRate = 0;
         public int sampleDepth = 0;

@@ -67,6 +67,7 @@ namespace av{
             AVMediaType mediaType = stream->codecpar->codec_type;
             if (mediaType == AVMEDIA_TYPE_VIDEO) {
                 video_codecParam.codec_type = AVMEDIA_TYPE_VIDEO;
+                video_codecParam.pix_fmt = stream->codecpar->format;
                 video_codecParam.codec_id = stream->codecpar->codec_id;
                 video_codecParam.width = stream->codecpar->width;
                 video_codecParam.height = stream->codecpar->height;

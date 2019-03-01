@@ -9,7 +9,6 @@ import android.os.Message;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -31,6 +30,7 @@ import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_AVC;
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_HEVC;
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_VP8;
 import static apprtc.org.grafika.media.AVMediaCodec.AV_CODEC_ID_VP9;
+import static apprtc.org.grafika.media.AVMediaCodec.AV_PIX_FMT_YUV420P;
 import static apprtc.org.grafika.media.AVMediaCodec.BUFFER_FLAG_EXTERNAL_DATA;
 import static apprtc.org.grafika.media.AVStruct.AVMediaType.VIDEO;
 
@@ -446,6 +446,20 @@ public class AVMediaRecode implements AVRecodeInterface {
                     return;
                 }
                 JNIBridge.native_demuxer_getMediaInfo(mEngineHandleDemuxer, mMediaInfo);
+
+                Logging.i(TAG, "source " + inputSource + ",duration " + mMediaInfo.duration + ",startTime " + mMediaInfo.startTime +
+                        ",videoCodecID(h264=27) " + mMediaInfo.videoCodecID +
+                        ",width " + mMediaInfo.width + ",height " + mMediaInfo.height + ",framerate " + mMediaInfo.framerate +
+                        ",pixfmt(yuv420p=0) " + mMediaInfo.pixfmt);
+                Logging.i(TAG, "audioCodecID " + mMediaInfo.audioCodecID + ",channels " + mMediaInfo.channels + ",sampleRate " + mMediaInfo.sampleRate +
+                        ",sampleDepth " + mMediaInfo.sampleDepth + ",frameSize " + mMediaInfo.frameSize);
+
+                if(mMediaInfo.pixfmt != AV_PIX_FMT_YUV420P){
+                    eventListener_inner.onErrorMessage(-1, "only support yuv420p, this format is " + mMediaInfo.pixfmt);
+                    Logging.e(TAG, "only support yuv420p, this format is " + mMediaInfo.pixfmt);
+                    return;
+                }
+
                 rootEglBase = EglBase.create();
                 mSurfaceTextureHelper = SurfaceTextureHelper.create("vp_texturehelp", rootEglBase.getEglBaseContext());
                 if(!initVideoDecoder()){
@@ -453,10 +467,7 @@ public class AVMediaRecode implements AVRecodeInterface {
                     eventListener_inner.onErrorMessage(-1, "open video decoder error");
                     Logging.e(TAG, "open video decoder error");
                 }
-                Logging.i(TAG, "duration " + mMediaInfo.duration + ",startTime " + mMediaInfo.startTime + ",videoCodecID " + mMediaInfo.videoCodecID +
-                                        ",width " + mMediaInfo.width + ",height " + mMediaInfo.height + ",framerate " + mMediaInfo.framerate);
-                Logging.i(TAG, "audioCodecID " + mMediaInfo.audioCodecID + ",channels " + mMediaInfo.channels + ",sampleRate " + mMediaInfo.sampleRate +
-                        ",sampleDepth " + mMediaInfo.sampleDepth + ",frameSize " + mMediaInfo.frameSize);
+
             }
         });
 

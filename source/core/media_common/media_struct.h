@@ -45,6 +45,7 @@ namespace av{
         int height = 0;
         int frame_rate_num= 0;
         int frame_rate_den = 0;
+        int pix_fmt = -1;
     }VCodecParm;
 
     typedef  struct{

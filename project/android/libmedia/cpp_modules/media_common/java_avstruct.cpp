@@ -228,6 +228,13 @@ int J4A_MediaInfo_Class_Init(JNIEnv *env){
         goto fail;
 
     class_id = java_class_MediaInfo.classId;
+    name = "pixfmt";
+    sign = "I";
+    java_class_MediaInfo.filed_pixfmt = J4A_GetFieldID__catchAll(env, class_id, name, sign);
+    if(java_class_MediaInfo.filed_pixfmt == nullptr)
+        goto fail;
+
+    class_id = java_class_MediaInfo.classId;
     name = "audioCodecID";
     sign = "I";
     java_class_MediaInfo.filed_audioCodecID = J4A_GetFieldID__catchAll(env, class_id, name, sign);
@@ -316,6 +323,10 @@ int J4A_MediaInfo_setFiled_height(JNIEnv *env, jobject object, int height){
 }
 int J4A_MediaInfo_setFiled_framerate(JNIEnv *env, jobject object, int framerate){
     env->SetIntField(object, java_class_MediaInfo.filed_framerate, framerate);
+    return 0;
+}
+int J4A_MediaInfo_setFiled_pixfmt(JNIEnv *env, jobject object, int pixfmt){
+    env->SetIntField(object, java_class_MediaInfo.filed_pixfmt, pixfmt);
     return 0;
 }
 int J4A_MediaInfo_setFiled_audioCodecID(JNIEnv *env, jobject object, int id){

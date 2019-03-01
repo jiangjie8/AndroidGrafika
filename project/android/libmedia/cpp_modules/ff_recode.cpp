@@ -132,6 +132,8 @@ namespace av{
                 framerate = m_video_codecParam.frame_rate_num/m_video_codecParam.frame_rate_den;
             }
             J4A_MediaInfo_setFiled_framerate(env, mediaInfo, framerate);
+            J4A_MediaInfo_setFiled_pixfmt(env, mediaInfo, m_video_codecParam.pix_fmt);
+
         }
 
         if(m_audio_codecParam.sample_rate > 0 &&

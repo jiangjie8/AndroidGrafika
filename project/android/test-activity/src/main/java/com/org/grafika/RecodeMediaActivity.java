@@ -35,7 +35,7 @@ public class RecodeMediaActivity extends AppCompatActivity {
 
     void startRecoder() {
         mediaRecode = AVRecodeInterface.getRecodeInstance();
-        mediaRecode.openInputSource("/sdcard/Download/video.mp4");
+        mediaRecode.openInputSource("/sdcard/Download/2k.mp4");
         File dir = new File("/sdcard/Download/jie");
         if (!dir.exists()) {
             dir.mkdirs();

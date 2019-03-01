@@ -61,6 +61,7 @@ struct JavaMediaInfo {
     jfieldID  filed_width;
     jfieldID  filed_height;
     jfieldID  filed_framerate;
+    jfieldID  filed_pixfmt;
 
     jfieldID  filed_audioCodecID;
     jfieldID  filed_channels;
@@ -77,6 +78,7 @@ int J4A_MediaInfo_setFiled_videoCodecID(JNIEnv *env, jobject object, int name);
 int J4A_MediaInfo_setFiled_width(JNIEnv *env, jobject object, int width);
 int J4A_MediaInfo_setFiled_height(JNIEnv *env, jobject object, int height);
 int J4A_MediaInfo_setFiled_framerate(JNIEnv *env, jobject object, int framerate);
+int J4A_MediaInfo_setFiled_pixfmt(JNIEnv *env, jobject object, int pixfmt);
 int J4A_MediaInfo_setFiled_audioCodecID(JNIEnv *env, jobject object, int name);
 int J4A_MediaInfo_setFiled_channels(JNIEnv *env, jobject object, int channels);
 int J4A_MediaInfo_setFiled_sampleRate(JNIEnv *env, jobject object, int sampleRate);
