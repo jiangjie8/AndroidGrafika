@@ -60,7 +60,7 @@ public:
         m_encodeV.reset();
     }
 
-    int openInputStreams(const char *file1, const char *file2);
+    int openInputStreams(const char *input1, const char *input2, const char *output);
 
     int openOutputFile(const char *file);
 

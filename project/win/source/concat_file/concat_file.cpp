@@ -1,9 +1,11 @@
 #include "concat_file.h"
+#include  <fstream>
 
 //constexpr char *Small_LOGO = "./smallFlag.png";
 constexpr char *Small_LOGO = "/opt/vcloud/smallFlag.png";
 constexpr float Flexible = 0.25;
 namespace av {
+
 std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
 
     AVDemuxer demuxer;
@@ -99,11 +101,11 @@ std::vector<std::string> split(const char *s, char delimiter)
     return tokens;
 }
 
-int MergerCtx::openInputStreams(const char *file1, const char *file2) 
+int MergerCtx::openInputStreams(const char *input1, const char *input2, const char *output)
 {
     int ret = 0;
     m_aStream1.reset(new AVDemuxer());
-    if (m_aStream1->openInputFormat(file1) < 0) {
+    if (m_aStream1->openInputFormat(input1) < 0) {
         m_aStream1.reset();
         return -1;
     }
@@ -113,7 +115,7 @@ int MergerCtx::openInputStreams(const char *file1, const char *file2)
 
 
     m_vStream1.reset(new AVDemuxer());
-    if (m_vStream1->openInputFormat(file1) < 0) {
+    if (m_vStream1->openInputFormat(input1) < 0) {
         m_vStream1.reset();
         return -1;
     }
@@ -123,9 +125,19 @@ int MergerCtx::openInputStreams(const char *file1, const char *file2)
     }
 
     m_vStream2.reset(new AVDemuxer());
-    if (m_vStream2->openInputFormat(file2) < 0) {
+    if (m_vStream2->openInputFormat(input2) < 0) {
         m_vStream2.reset();
         return -1;
+    }
+
+    if (m_vStream2->getStream(AVMEDIA_TYPE_VIDEO) == nullptr) {
+        LOGW("this file %s hasn't video stream, only execute copy[%s] and then exit.\n", input2, output);
+        {
+            std::ifstream  src(input1, std::ios::binary);
+            std::ofstream  dst(output, std::ios::binary);
+            dst.operator<<(src.rdbuf());
+        }
+        exit(0);
     }
 
     std::string  extensions = m_vStream2->getInputFormat()->extensions;
@@ -136,7 +148,7 @@ int MergerCtx::openInputStreams(const char *file1, const char *file2)
     }
 
     
-    return correctTimestamp(file1, file2);
+    return correctTimestamp(input1, input2);
 }
 
 int MergerCtx::correctTimestamp(const char *file1, const char *file2) {
@@ -680,7 +692,7 @@ void MergerCtx::genCommentInfo(std::map<int64_t, VideoPadding> &sei_info) {
         }
         auto clip1 = (--clip_info.end())->second;
         auto clip2 = info.second;
-        if (clip1.end_pts + m_frame_duration < clip2.start_pts) {
+        if (clip1.end_pts + m_frame_duration * ( 1 + 0.01) < clip2.start_pts) {
             //info.second.end_pts += m_frame_duration;
             clip_info.insert(info);
         }
@@ -806,7 +818,7 @@ int main(int argc, char *argv[]) {
     const char *in1 = command_t.input1.c_str();
     const char *in2 = command_t.input2.c_str();
     MergerCtx ctx;
-    if ((ret = ctx.openInputStreams(in1, in2)) < 0)
+    if ((ret = ctx.openInputStreams(in1, in2, command_t.output.c_str())) < 0)
         return ret;
     if ((ret = ctx.openOutputFile(command_t.output.c_str())) < 0)
         return ret;

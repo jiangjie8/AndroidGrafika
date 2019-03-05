@@ -454,11 +454,11 @@ public class AVMediaRecode implements AVRecodeInterface {
                 Logging.i(TAG, "audioCodecID " + mMediaInfo.audioCodecID + ",channels " + mMediaInfo.channels + ",sampleRate " + mMediaInfo.sampleRate +
                         ",sampleDepth " + mMediaInfo.sampleDepth + ",frameSize " + mMediaInfo.frameSize);
 
-                if(mMediaInfo.pixfmt != AV_PIX_FMT_YUV420P){
-                    eventListener_inner.onErrorMessage(-1, "only support yuv420p, this format is " + mMediaInfo.pixfmt);
-                    Logging.e(TAG, "only support yuv420p, this format is " + mMediaInfo.pixfmt);
-                    return;
-                }
+//                if(mMediaInfo.pixfmt != AV_PIX_FMT_YUV420P){
+//                    eventListener_inner.onErrorMessage(-1, "only support yuv420p, this format is " + mMediaInfo.pixfmt);
+//                    Logging.e(TAG, "only support yuv420p, this format is " + mMediaInfo.pixfmt);
+//                    return;
+//                }
 
                 rootEglBase = EglBase.create();
                 mSurfaceTextureHelper = SurfaceTextureHelper.create("vp_texturehelp", rootEglBase.getEglBaseContext());
