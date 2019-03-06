@@ -57,19 +57,17 @@ public class AVMediaRecode implements AVRecodeInterface {
     private boolean recodeIsRunning = false;
     private int mErrorCode = 0;
 
-    private String tempOutputFile = "";
-    private String thumbnailName = null;
-
     private String inputSource;
     private String clipDirectory;
     private String clipPrefix;
     private int clipBitrate = 0;
     private int clipWidth = 0;
     private int clipHeight = 0;
-    private int clipDurationMs;
     private int clipIndex = 0;
     private int thumbnailWidth = 0;
     private int thumbnailHeight = 0;
+    private long clipDurationUs;
+
 
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private onRecodeEventListener eventListener = null;
@@ -124,6 +122,21 @@ public class AVMediaRecode implements AVRecodeInterface {
         }
     };
 
+    class StreamInfo{
+        long startUs = Long.MAX_VALUE;
+        long durationUs = Long.MAX_VALUE;
+        int index = -1;
+        String output = null;
+        String thumbnail = null;
+
+        StreamInfo(long startUs, long durationUs, int index){
+            this.startUs = startUs;
+            this.durationUs = durationUs;
+            this.index = index;
+        }
+    }
+
+    private StreamInfo streamInfo = null;
 
     public AVMediaRecode(){ }
 
@@ -267,7 +280,6 @@ public class AVMediaRecode implements AVRecodeInterface {
             return;
         }
 
-        generatorClip(Long.MAX_VALUE);
         while(recodeIsRunning && mErrorCode == 0){
             AVPacket packet = readPacket();
             if(packet == null) {
@@ -281,7 +293,7 @@ public class AVMediaRecode implements AVRecodeInterface {
             if(mVideoDecoder != null){
                 MediaCodecVideoDecoder.DecodedTextureBuffer textureBuffer = mVideoDecoder.receiveFrame();
                 if(textureBuffer != null){
-                    if(generatorClip(TimeUnit.MICROSECONDS.toMillis(textureBuffer.ptsUs)) < 0)
+                    if(generatorClip(textureBuffer.ptsUs) < 0)
                         break;
                     encoderWrietPacket(textureBuffer.textureID, textureBuffer.transformMatrix, textureBuffer.ptsUs);
                     mSurfaceTextureHelper.returnTextureFrame();
@@ -295,7 +307,7 @@ public class AVMediaRecode implements AVRecodeInterface {
             MediaCodecVideoDecoder.DecodedTextureBuffer textureBuffer = mVideoDecoder.flushDecoder();
             if(textureBuffer == null)
                 break;
-            generatorClip(TimeUnit.MICROSECONDS.toMillis(textureBuffer.ptsUs));
+            generatorClip(textureBuffer.ptsUs);
             encoderWrietPacket(textureBuffer.textureID, textureBuffer.transformMatrix, textureBuffer.ptsUs);
             mSurfaceTextureHelper.returnTextureFrame();
 
@@ -310,27 +322,32 @@ public class AVMediaRecode implements AVRecodeInterface {
 
 
 
-    int generatorClip(long ptsMs){
+    int generatorClip(long ptsUs){
         int ret = 0;
-//        long start = clipIndex * clipDurationMs;
-        long end = (clipIndex + 1) * clipDurationMs + TimeUnit.MICROSECONDS.toMillis(mMediaInfo.startTime);
 
-        long leftDuration = TimeUnit.MICROSECONDS.toMillis(mMediaInfo.duration) - end;
-        if((ptsMs >= end && leftDuration >= 3000) && ptsMs != Long.MAX_VALUE){
+        if(streamInfo != null && (ptsUs >= streamInfo.startUs + streamInfo.durationUs)){
             clipIndex++;
             flushEncoder();
+            streamInfo = null;
         }
 
-        if((ptsMs >= end && leftDuration >= 3000) || ptsMs == Long.MAX_VALUE){
-            tempOutputFile = String.format(clipDirectory + clipPrefix, clipIndex);
-            Logging.i(TAG, "new output " + tempOutputFile);
+        if(streamInfo == null){
+            long duration = clipDurationUs;
+
+            if(mMediaInfo.duration  - (clipIndex + 1) * clipDurationUs < 3 * 1000000){
+                duration = mMediaInfo.duration - clipIndex* clipDurationUs;
+            }
+
+            streamInfo = new StreamInfo(ptsUs, duration, clipIndex);
+            streamInfo.output = String.format(clipDirectory + clipPrefix, clipIndex);
+            Logging.i(TAG, "new output " + streamInfo.output);
             MediaInfo mediaInfo = new MediaInfo();
             mediaInfo.videoCodecID = EncoderID;
             mediaInfo.width = clipWidth;
             mediaInfo.height = clipHeight;
-            ret = JNIBridge.native_demuxer_openOutputFormat(mEngineHandleDemuxer, tempOutputFile, mediaInfo);
+            ret = JNIBridge.native_demuxer_openOutputFormat(mEngineHandleDemuxer, streamInfo.output, mediaInfo);
             if(ret < 0){
-                Logging.e(TAG,"open output error " + tempOutputFile);
+                Logging.e(TAG,"open output error " + streamInfo.output);
                 eventListener_inner.onErrorMessage(ret, "open output error");
                 return  ret;
             }
@@ -353,8 +370,10 @@ public class AVMediaRecode implements AVRecodeInterface {
         boolean ret = mVideoEncoder.sendFrame(oesTextureId, transformationMatrix, presentationTimestampUs);
 
         if(ret ){
-            String name =  tempOutputFile.substring(0, tempOutputFile.lastIndexOf(".")) + ".jpg";
-            if(thumbnailName == null || !thumbnailName.equals(name)){
+
+            if(streamInfo.thumbnail == null){
+
+                streamInfo.thumbnail = streamInfo.output.substring(0, streamInfo.output.lastIndexOf(".")) + ".jpg";;
 
                 if(thumbnailHeight == -1 && mMediaInfo.height > 0 && mMediaInfo.width > 0){
                     thumbnailHeight =  thumbnailWidth * mMediaInfo.height / mMediaInfo.width;
@@ -363,8 +382,7 @@ public class AVMediaRecode implements AVRecodeInterface {
                     thumbnailHeight = thumbnailWidth * clipHeight / clipWidth;
                 }
 
-                thumbnailName = name;
-                newThumbnail( thumbnailName, thumbnailWidth, thumbnailHeight, oesTextureId, transformationMatrix);
+                newThumbnail( streamInfo.thumbnail, thumbnailWidth, thumbnailHeight, oesTextureId, transformationMatrix);
             }
         }
 
@@ -402,11 +420,11 @@ public class AVMediaRecode implements AVRecodeInterface {
         }
         int ret = JNIBridge.native_demuxer_closeOutputFormat(mEngineHandleDemuxer);
         if(ret < 0){
-            Logging.e(TAG,"close output file error  " + tempOutputFile);
+            Logging.e(TAG,"close output file error  " + streamInfo.output);
             eventListener_inner.onErrorMessage(ret, "open output error");
         }else{
-            Logging.i(TAG,"one video file generation  " + tempOutputFile);
-            eventListener_inner.onOneFileGen(tempOutputFile);
+            Logging.i(TAG,"one video file generation  " + streamInfo.output);
+            eventListener_inner.onOneFileGen(streamInfo.output);
         }
         if(mVideoEncoder != null){mVideoEncoder.release(); mVideoEncoder = null;}
     }
@@ -533,7 +551,7 @@ public class AVMediaRecode implements AVRecodeInterface {
     public boolean setOutputSourceParm(String clipDirectory, String clipPrefix, int clipWidth, int clipHeight, int clipBitrate, int clipDurationMs,
                                        int thumbnailWidth, int thumbnailHeight) {
         this.clipPrefix = clipPrefix;
-        this.clipDurationMs = clipDurationMs;
+        this.clipDurationUs = TimeUnit.MILLISECONDS.toMicros(clipDurationMs);
         this.clipWidth = clipWidth;
         this.clipHeight = clipHeight;
         this.thumbnailWidth = thumbnailWidth;
