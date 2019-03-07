@@ -401,6 +401,9 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
                 if((codecBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
                     decodeFrameEnd = true;
                     Logging.i(TAG, "decode end, no frame will be available after this");
+                    if(codecBufferInfo.size == 0){
+                        return null;
+                    }
                 }
                 return new CodecBufferInfo(result, codecBufferInfo.size, codecBufferInfo.offset, codecBufferInfo.flags, codecBufferInfo.presentationTimeUs, false);
             }

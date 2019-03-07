@@ -334,9 +334,10 @@ public class AVMediaRecode implements AVRecodeInterface {
         if(streamInfo == null){
             long duration = clipDurationUs;
 
-            if(mMediaInfo.duration  - (clipIndex + 1) * clipDurationUs < 3 * 1000000){
-                duration = mMediaInfo.duration - clipIndex* clipDurationUs;
+            if(mMediaInfo.duration  - (clipIndex + 1) * clipDurationUs < TimeUnit.SECONDS.toMicros(3)){
+                duration = mMediaInfo.duration - clipIndex* clipDurationUs + TimeUnit.SECONDS.toMicros(1);
             }
+            ptsUs = clipDurationUs * (ptsUs / clipDurationUs);
 
             streamInfo = new StreamInfo(ptsUs, duration, clipIndex);
             streamInfo.output = String.format(clipDirectory + clipPrefix, clipIndex);
