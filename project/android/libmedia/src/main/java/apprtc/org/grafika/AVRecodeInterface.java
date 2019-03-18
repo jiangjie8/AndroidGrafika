@@ -1,8 +1,7 @@
 package apprtc.org.grafika;
 
-import android.os.Handler;
-
 import apprtc.org.grafika.media.AVMediaRecode;
+import apprtc.org.grafika.media.AVStruct.MediaInfo;
 
 public interface AVRecodeInterface {
     public static  AVRecodeInterface getRecodeInstance() {
@@ -21,9 +20,17 @@ public interface AVRecodeInterface {
         Logging.setLoggingCallback(callback);
     }
 
+
+
+    public static final int ERROR_NONE =                0;
+    public static final int ERROR_DECODE =              -0x0010;
+    public static final int ERROR_ENCODE =              -0x0020;
+    public static final int ERROR_EGL =                 -0x0030;
+    public static final int ERROR_BUG =                 -0x0040;
+
+
     public interface onRecodeEventListener {
-        void onPrintReport(final String message);
-        void onErrorMessage(final int errorCode, final String errorMessage);
+        void onReportMessage(final MediaInfo mediaInfo, final int code, final String message);
         void onOneFileGen(final String fileName);
         void onRecodeFinish();
     }
