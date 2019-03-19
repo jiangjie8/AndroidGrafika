@@ -193,6 +193,11 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2) {
         }
 
         for (auto &segmentInfo : probe_sei_info(file2)) {
+            if (segmentInfo.second.start_pts < m_small_offset - m_frame_duration) {
+                LOGE("preview file's start time is %lld, slice file's start time is %lld. diff is %lld\n", 
+                    m_small_offset, segmentInfo.second.start_pts, m_small_offset - segmentInfo.second.start_pts);
+                return -1;
+            }
             segmentInfo.second.start_pts -= m_small_offset;
             segmentInfo.second.end_pts -= m_small_offset;
             segment_info.insert(std::make_pair(segmentInfo.second.start_pts,
