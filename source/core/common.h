@@ -28,18 +28,18 @@
 
 #elif defined(Win)
 
-#define LOGV(fmt, ...)   fprintf(stderr, "[VERBOSE] "##fmt, ##__VA_ARGS__)
-#define LOGD(fmt, ...)   fprintf(stderr, "[DEBUG] "##fmt, ##__VA_ARGS__)
-#define LOGI(fmt, ...)   fprintf(stderr, "[INFO] "##fmt, ##__VA_ARGS__)
-#define LOGW(fmt, ...)   fprintf(stderr, "[WARNING] "##fmt, ##__VA_ARGS__)
-#define LOGE(fmt, ...)   fprintf(stderr, "[ERROR] "##fmt, ##__VA_ARGS__)
+#define LOGV(fmt, ...)   fprintf(stderr, "[VERBOSE] " fmt, ##__VA_ARGS__)
+#define LOGD(fmt, ...)   fprintf(stderr, "[DEBUG] " fmt, ##__VA_ARGS__)
+#define LOGI(fmt, ...)   fprintf(stderr, "[INFO] " fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...)   fprintf(stderr, "[WARNING] " fmt, ##__VA_ARGS__)
+#define LOGE(fmt, ...)   fprintf(stderr, "[ERROR] " fmt, ##__VA_ARGS__)
 #elif defined(Linux)
 #include <unistd.h>
-#define LOGV(fmt, ...)   fprintf(stderr, "[VERBOSE] "##fmt, ##__VA_ARGS__)
-#define LOGD(fmt, ...)   fprintf(stderr, "[DEBUG] "##fmt, ##__VA_ARGS__)
-#define LOGI(fmt, ...)   fprintf(stderr, "[INFO] "##fmt, ##__VA_ARGS__)
-#define LOGW(fmt, ...)   fprintf(stderr, "[WARNING] "##fmt, ##__VA_ARGS__)
-#define LOGE(fmt, ...)   fprintf(stderr, "[ERROR] "##fmt, ##__VA_ARGS__)
+#define LOGV(fmt, ...)   fprintf(stderr, "[VERBOSE] " fmt, ##__VA_ARGS__)
+#define LOGD(fmt, ...)   fprintf(stderr, "[DEBUG] " fmt, ##__VA_ARGS__)
+#define LOGI(fmt, ...)   fprintf(stderr, "[INFO] " fmt, ##__VA_ARGS__)
+#define LOGW(fmt, ...)   fprintf(stderr, "[WARNING] " fmt, ##__VA_ARGS__)
+#define LOGE(fmt, ...)   fprintf(stderr, "[ERROR] " fmt, ##__VA_ARGS__)
  
 #endif
 
