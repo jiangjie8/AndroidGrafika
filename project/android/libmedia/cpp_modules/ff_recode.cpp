@@ -187,6 +187,9 @@ namespace av{
 
     int FFRecoder::closeOutputFormat(){
         int ret = -1;
+        if(m_video_eof){
+            writeAudioPacket(AV_NOPTS_VALUE);
+        }
         if(m_muxer)
             ret = m_muxer->closeOutputForamt();
         m_muxer.reset();
@@ -202,7 +205,7 @@ namespace av{
 //            av_init_packet(packet.get());
             ret = m_inputFormat->readPacket(packet.get());
             if(ret == AVERROR_EOF){
-                writeAudioPacket(AV_NOPTS_VALUE);
+                m_video_eof = true;
                 return AVERROR_EOF;
             }
             else if(ret < 0){
@@ -226,6 +229,10 @@ namespace av{
         return ret;
     }
     int FFRecoder::writeInterleavedPacket(AVPacket *packet){
+        if(m_muxer == nullptr){
+            ALOGE("output file don't open,  write packet error. please check.");
+        }
+
         if(m_timestamp_start == AV_NOPTS_VALUE){
             m_timestamp_start = packet->pts;
             char offset[64] = {0};
@@ -390,7 +397,7 @@ namespace av{
                 break;
             }
 
-            if(audio_pts + audio_duration > video_pts &&  video_pts != AV_NOPTS_VALUE){
+            if(audio_pts > video_pts && video_pts != AV_NOPTS_VALUE){
                 break;
             }
         }

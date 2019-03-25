@@ -38,7 +38,7 @@ private:
     int m_spspps_buffer_size = 0;
     int v_index = -1;
     int a_index = -1;
-    int64_t m_previous_vpts{AV_NOPTS_VALUE};
+    bool m_video_eof{false};
     int64_t m_previous_apts{AV_NOPTS_VALUE};
 public:
     FFRecoder() = default;
