@@ -81,6 +81,11 @@ namespace av{
         ret = m_inputFormat->openInputFormat(m_input.c_str());
         if(ret < 0)
             return ret;
+
+        if(m_inputFormat->getStream(AVMEDIA_TYPE_VIDEO) == nullptr){
+            return -1;
+        }
+
         m_video_codecParam = m_inputFormat->video_codecParam;
         m_audio_codecParam = m_inputFormat->audio_codecParam;
         m_stream_info = m_inputFormat->stream_info;
