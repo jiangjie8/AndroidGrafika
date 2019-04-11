@@ -115,7 +115,11 @@ int MergerCtx::openInputStreams(const char *input1, const char *input2, const ch
 
 
     m_vStream1.reset(new AVDemuxer());
-    if (m_vStream1->openInputFormat(input1) < 0) {
+    if (m_vStream1->openInputFormat(input1) < 0 ||  
+        m_vStream1->getStream(AVMEDIA_TYPE_VIDEO) == nullptr
+        ) {
+        LOGE("open preview file %s error, maybe this don't have video data, please check.\n",
+            input1);
         m_vStream1.reset();
         return -1;
     }
@@ -302,6 +306,11 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2) {
     for (const auto info : segment_info) {
         InsertType type = info.second.streamType;
         if (type == InsertType::Large) {
+            if (m_large_correct.size() == 0) {
+                LOGW("preview file don't include large %s clip duration [%lld  %lld], do nothing and exit now.\n", 
+                    file2, info.second.start_pts, info.second.end_pts);
+                exit(0);
+            }
             segment_info.erase(info.first);
             int64_t start = m_large_correct.front().first + m_large_correct.front().second;
             int64_t end = m_large_correct.back().first + m_large_correct.back().second;
