@@ -152,10 +152,10 @@ int MergerCtx::openInputStreams(const char *input1, const char *input2, const ch
     }
 
     
-    return correctTimestamp(input1, input2);
+    return correctTimestamp(input1, input2, output);
 }
 
-int MergerCtx::correctTimestamp(const char *file1, const char *file2) {
+int MergerCtx::correctTimestamp(const char *file1, const char *file2, const char *output) {
 
     int ret = 0;
     unique_ptr<AVDemuxer> small_stream = unique_ptr<AVDemuxer>(new AVDemuxer());
@@ -307,8 +307,13 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2) {
         InsertType type = info.second.streamType;
         if (type == InsertType::Large) {
             if (m_large_correct.size() == 0) {
-                LOGW("preview file don't include large %s clip duration [%lld  %lld], do nothing and exit now.\n", 
+                LOGW("preview file don't include large file (%s) clip duration [%lld  %lld], only execute copy and then exit.\n", 
                     file2, info.second.start_pts, info.second.end_pts);
+                {
+                    std::ifstream  src(file1, std::ios::binary);
+                    std::ofstream  dst(output, std::ios::binary);
+                    dst.operator<<(src.rdbuf());
+                }
                 exit(0);
             }
             segment_info.erase(info.first);

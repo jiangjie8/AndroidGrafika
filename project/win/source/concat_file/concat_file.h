@@ -102,7 +102,7 @@ private:
     void genCommentInfo(std::map<int64_t, VideoPadding> &sei_info);
     void setCommentInfo();
 
-    int correctTimestamp(const char *file1, const char *file2);
+    int correctTimestamp(const char *file1, const char *file2, const char *output);
 };
 
 typedef struct CommandCtx
