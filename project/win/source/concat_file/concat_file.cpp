@@ -303,12 +303,12 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2, const char
         m_large_correct.push_back(std::make_pair(packet_l->pts, packet_s->pts - packet_l->pts));
     }// while (true)
 
-    for (const auto info : segment_info) {
-        InsertType type = info.second.streamType;
+    for (auto iterator = segment_info.cbegin(); iterator != segment_info.cend(); iterator++) {
+        InsertType type = iterator->second.streamType;
         if (type == InsertType::Large) {
             if (m_large_correct.size() == 0) {
                 LOGW("preview file don't include large file (%s) clip duration [%lld  %lld], only execute copy and then exit.\n", 
-                    file2, info.second.start_pts, info.second.end_pts);
+                    file2, iterator->second.start_pts, iterator->second.end_pts);
                 {
                     std::ifstream  src(file1, std::ios::binary);
                     std::ofstream  dst(output, std::ios::binary);
@@ -316,7 +316,7 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2, const char
                 }
                 exit(0);
             }
-            segment_info.erase(info.first);
+            segment_info.erase(iterator);
             int64_t start = m_large_correct.front().first + m_large_correct.front().second;
             int64_t end = m_large_correct.back().first + m_large_correct.back().second;
             segment_info.insert(std::make_pair(start, VideoPadding(InsertType::Large, start, end)));
@@ -330,13 +330,17 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2, const char
                 m_segment_info.insert(info);
             }
             else {
-                const auto & previous = m_segment_info.find(info.first);
-                if (previous == m_segment_info.end()) {
-                    m_segment_info.insert(info);
+                const auto & has_insert = m_segment_info.find(info.first);
+                if (has_insert != m_segment_info.end()) {
+                    if (has_insert->second.end_pts < info.second.end_pts) {
+                        m_segment_info.erase(info.first);
+                        m_segment_info.insert(info);
+                    }
                     continue;
                 }
-                if (previous->second.end_pts < info.second.end_pts) {
-                    m_segment_info.erase(info.first);
+
+                auto last_iterator = --m_segment_info.cend();
+                if (last_iterator->second.end_pts < info.second.end_pts) {
                     m_segment_info.insert(info);
                 }
             }
