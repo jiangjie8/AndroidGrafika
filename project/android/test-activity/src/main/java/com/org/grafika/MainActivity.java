@@ -105,8 +105,8 @@ public class MainActivity extends ListActivity {
                 new int[] { android.R.id.text1, android.R.id.text2 } ));
 
 
-        setConfigure();
-        getConfigure();
+//        setConfigure();
+//        getConfigure();
     }
 
     @Override

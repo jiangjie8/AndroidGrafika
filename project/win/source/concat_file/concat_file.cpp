@@ -35,9 +35,11 @@ std::map<int64_t, VideoPadding> probe_sei_info(const char *input) {
         if (media_type != AVMEDIA_TYPE_VIDEO) {
             continue;
         }
-        else if (!(packet->flags & AV_PKT_FLAG_KEY)) {
-            //last_pts = packet->pts + packet->duration;
-            last_pts = packet->pts;
+        else {
+            last_pts = last_pts > packet->pts ? last_pts : packet->pts;
+        }
+
+        if (!(packet->flags & AV_PKT_FLAG_KEY)) {
             continue;
         }
         //previous_pts = packet->pts + packet->duration;
@@ -349,7 +351,7 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2, const char
         for (auto it = m_segment_info.begin(); it != m_segment_info.end(); it++) {
             auto next = std::next(it);
             if (next != m_segment_info.end()) {
-                if (it->second.end_pts < next->second.start_pts) {
+                if (it->second.end_pts + m_frame_duration < next->second.start_pts) {
                     it->second.write_end_pts = it->second.end_pts;
                 }
                 else {

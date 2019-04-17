@@ -13,6 +13,7 @@ import java.io.File;
 import apprtc.org.grafika.AVRecodeInterface;
 
 import apprtc.org.grafika.Logging;
+import apprtc.org.grafika.media.AVStruct;
 
 
 public class RecodeMediaActivity extends AppCompatActivity {
@@ -35,7 +36,7 @@ public class RecodeMediaActivity extends AppCompatActivity {
 
     void startRecoder() {
         mediaRecode = AVRecodeInterface.getRecodeInstance();
-        mediaRecode.openInputSource("/sdcard/Download/2k.mp4");
+        mediaRecode.openInputSource("/test/mnt/0/jie/vbox8144_13f6a_l_cMVI_25-s5b.MOV");
         File dir = new File("/sdcard/Download/jie");
         if (!dir.exists()) {
             dir.mkdirs();
@@ -48,35 +49,34 @@ public class RecodeMediaActivity extends AppCompatActivity {
                 }
             }
         }
-        mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "t_hevc_5m-%03d.mp4",
-                960, 540, (int)(1.5 * 1024), 10000,
+        int width = 960;
+        int height = 540;
+        int bitrate = (int) (1.5 * 1024);
+        int duration = 10000;
+
+        mediaRecode.setOutputSourceParm("/sdcard/Download/jie", String.format("h264_%dP_%dM", height, bitrate/1000)+"-%03d.mp4",
+                width, height, bitrate, duration,
                 540, -1);
 //        mediaRecode.setOutputSourceParm("/sdcard/Download/jie", "hevc_1088p_2000kb-%03d.mp4",
 //                1920, 1088, 2000, 100000);
         mediaRecode.setRecodeEventListener(new AVRecodeInterface.onRecodeEventListener() {
             @Override
-            public void onPrintReport(final String message) {
-                Logging.d(TAG, message);
+            public void onReportMessage(final AVStruct.MediaInfo mediaInfo, final int code, final String message){
+                Logging.e(TAG, "error information: " + message);
             }
-
             @Override
-            public void onErrorMessage(int errorCode, String errorMessage) {
-                Logging.e(TAG, "error information: " + errorMessage);
-            }
-
-            @Override
-            public void onOneFileGen(String fileName) {
+            public void onOneFileGen(final String fileName){
                 Logging.w(TAG, "one video file generation  " + fileName);
             }
-
             @Override
-            public void onRecodeFinish() {
+            public void onRecodeFinish(){
                 if (mWork) {
                     Logging.e(TAG, "=== spend time  " + (System.currentTimeMillis() - start_time) / 1000.0);
                     start_time = System.currentTimeMillis();
 //                    startRecoder();
                 }
             }
+
         });
 
         mediaRecode.starRecode();

@@ -138,11 +138,8 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
             dequeuedSurfaceOutputBuffers.clear();
             droppedFrames = 0;
             return true;
-        } catch (IllegalStateException e) {
+        } catch (Exception e) {
             Logging.e(TAG, "initDecode failed", e);
-            return false;
-        } catch (IOException e) {
-            e.printStackTrace();
             return false;
         }
     }
@@ -170,36 +167,39 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
         if(mediaCodecThread != null)
             checkOnMediaCodecThread();
 
-        // Run Mediacodec stop() and release() on separate thread since sometime
-        // Mediacodec.stop() may hang.
-        final CountDownLatch releaseDone = new CountDownLatch(1);
+        if(mediaCodec != null){
+            // Run Mediacodec stop() and release() on separate thread since sometime
+            // Mediacodec.stop() may hang.
+            final CountDownLatch releaseDone = new CountDownLatch(1);
 
-        Runnable runMediaCodecRelease = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Logging.d(TAG, "Java releaseDecoder on release thread");
-                    mediaCodec.stop();
-                    mediaCodec.release();
-                    Logging.d(TAG, "Java releaseDecoder on release thread done");
-                } catch (Exception e) {
-                    Logging.e(TAG, "Media decoder release failed", e);
+            Runnable runMediaCodecRelease = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Logging.d(TAG, "Java releaseDecoder on release thread");
+                        mediaCodec.stop();
+                        mediaCodec.release();
+                        Logging.d(TAG, "Java releaseDecoder on release thread done");
+                    } catch (Exception e) {
+                        Logging.e(TAG, "Media decoder release failed", e);
+                    }
+                    releaseDone.countDown();
                 }
-                releaseDone.countDown();
-            }
-        };
-        new Thread(runMediaCodecRelease).start();
+            };
+            new Thread(runMediaCodecRelease).start();
 
-        if (!ThreadUtils.awaitUninterruptibly(releaseDone, MEDIA_CODEC_RELEASE_TIMEOUT_MS)) {
-            Logging.e(TAG, "Media decoder release timeout");
-            codecErrors++;
-            if (errorCallback != null) {
-                Logging.e(TAG, "Invoke codec error callback. Errors: " + codecErrors);
-                errorCallback.onMediaCodecVideoDecoderCriticalError(codecErrors);
+            if (!ThreadUtils.awaitUninterruptibly(releaseDone, MEDIA_CODEC_RELEASE_TIMEOUT_MS)) {
+                Logging.e(TAG, "Media decoder release timeout");
+                codecErrors++;
+                if (errorCallback != null) {
+                    Logging.e(TAG, "Invoke codec error callback. Errors: " + codecErrors);
+                    errorCallback.onMediaCodecVideoDecoderCriticalError(codecErrors);
+                }
             }
+
+            mediaCodec = null;
         }
 
-        mediaCodec = null;
         mediaCodecThread = null;
         runningInstance = null;
         if (useSurface) {
