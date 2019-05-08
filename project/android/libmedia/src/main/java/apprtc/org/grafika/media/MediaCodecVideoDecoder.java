@@ -55,6 +55,8 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
 
     private int width;
     private int height;
+    private int coded_width = 0;
+    private int coded_height = 0;
     private boolean hasDecodedFirstFrame;
     private final boolean useSurface = true;
 
@@ -114,7 +116,6 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
         try {
             this.width = format.getInteger(MediaFormat.KEY_WIDTH);
             this.height = format.getInteger(MediaFormat.KEY_HEIGHT);
-            GlRectDrawer.set_Encoder_FULL_RECTANGLE(this.width, this.height);
 
 //            MediaFormat myFormat = MediaFormat.createVideoFormat(format.getString(MediaFormat.KEY_MIME), format.getInteger(MediaFormat.KEY_WIDTH), format.getInteger(MediaFormat.KEY_HEIGHT));
 //            myFormat.setByteBuffer("csd-0", format.getByteBuffer("csd-0"));
@@ -389,6 +390,19 @@ public class MediaCodecVideoDecoder implements AVMediaCodec{
             }
             else if(result == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
                 MediaFormat format = mediaCodec.getOutputFormat();
+                this.coded_width = format.getInteger(MediaFormat.KEY_WIDTH);
+                if (format.containsKey("crop-left") && format.containsKey("crop-right")) {
+                    this.coded_width = format.getInteger("crop-right") + 1 - format.getInteger("crop-left");
+                }
+                this.coded_height = format.getInteger(MediaFormat.KEY_HEIGHT);
+                if (format.containsKey("crop-top") && format.containsKey("crop-bottom")) {
+                    this.coded_height = format.getInteger("crop-bottom") + 1 - format.getInteger("crop-top");
+                }
+                if(this.coded_width <= 0 || this.coded_height <= 0){
+                    this.coded_width = this.width;
+                    this.coded_height = this.height;
+                }
+                GlRectDrawer.set_Encoder_FULL_RECTANGLE(this.width, this.height, this.coded_width, this.coded_height);
 //                Logging.w(TAG, "INFO_OUTPUT_FORMAT_CHANGED");
             }
             else if(result == MediaCodec.INFO_TRY_AGAIN_LATER){

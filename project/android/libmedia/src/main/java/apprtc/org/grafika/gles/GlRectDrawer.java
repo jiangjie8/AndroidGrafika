@@ -102,12 +102,9 @@ public class GlRectDrawer implements RendererCommon.GlDrawer {
         1.0f, 1.0f // Top right.
   });
 
-  public static void set_Encoder_FULL_RECTANGLE(int width, int height){
-    int align = 16;
-    int align_width = (width + align - 1) & (-align);
-    int align_height = (height + align - 1) & (-align);
-    float offset_width = (align_width - width)/(float)align_width;
-    float offset_height = (align_height - height)/(float)align_height;
+  public static void set_Encoder_FULL_RECTANGLE(int width, int height, int coded_width, int coded_height){
+    float offset_width = (coded_width - width)/(float)coded_width;
+    float offset_height = (coded_height - height)/(float)coded_height;
     FULL_RECTANGLE_TEX_BUF_Encoder = GlUtil.createFloatBuffer(new float[] {
             0.0f, offset_height, // Bottom left.   fix bug  width 1080 but codec_width 1088
             1.0f - offset_width, offset_height, // Bottom right.
