@@ -184,7 +184,7 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2, const char
                     continue;
                 auto duration = split(clip.c_str(), ':');
                 int64_t start = std::stoll(duration.at(0));
-                int64_t end = std::stoll(duration.at(1));
+                int64_t end = std::stoll(duration.at(1)) - m_frame_duration;
                 segment_info.insert(std::make_pair(start, VideoPadding(InsertType::LargeInSmall, start, end)));
             }
         }
@@ -361,7 +361,8 @@ int MergerCtx::correctTimestamp(const char *file1, const char *file2, const char
             else {
                 it->second.write_end_pts = it->second.end_pts;
             }
-            LOGI("large clip duration info [%lld  %lld] type %d\n", it->second.start_pts, it->second.end_pts, it->second.streamType);
+            LOGI("large clip duration info [%lld  %lld] type %d\n", 
+                it->second.start_pts, it->second.end_pts + m_frame_duration, it->second.streamType);
         }
     
     }
@@ -434,25 +435,28 @@ int MergerCtx::filterConf(const AVCodecParameters *encode_param) {
     m_filterGraph.reset(new FilterGraph());
     char filter_spec[512] = { 0 };
 
-    std::shared_ptr<FILE> fd = std::shared_ptr<FILE>(std::fopen(Small_LOGO, "r"), [](FILE *ptr) {
-        if (ptr != nullptr) { std::fclose(ptr); }
-    });
-
-    if (fd) {
-        snprintf(filter_spec, sizeof(filter_spec) - 1,
-            "movie=%s[wm];[in][wm]overlay=0:0[logo];[logo]scale=w=%d:h=%d:flags=%d[out]",
-            Small_LOGO,
-            encode_param->width, encode_param->height,
-            SWS_FAST_BILINEAR);
-    }
-    else {
-        snprintf(filter_spec, sizeof(filter_spec) - 1,
-            "[in]scale=w=%d:h=%d:flags=%d[out]",
-            encode_param->width, encode_param->height,
-            SWS_FAST_BILINEAR);
-    }
-    fd = nullptr;
-
+//     std::shared_ptr<FILE> fd = std::shared_ptr<FILE>(std::fopen(Small_LOGO, "r"), [](FILE *ptr) {
+//         if (ptr != nullptr) { std::fclose(ptr); }
+//     });
+// 
+//     if (fd) {
+//         snprintf(filter_spec, sizeof(filter_spec) - 1,
+//             "movie=%s[wm];[in][wm]overlay=0:0[logo];[logo]scale=w=%d:h=%d:flags=%d[out]",
+//             Small_LOGO,
+//             encode_param->width, encode_param->height,
+//             SWS_FAST_BILINEAR);
+//     }
+//     else {
+//         snprintf(filter_spec, sizeof(filter_spec) - 1,
+//             "[in]scale=w=%d:h=%d:flags=%d[out]",
+//             encode_param->width, encode_param->height,
+//             SWS_FAST_BILINEAR);
+//     }
+//     fd = nullptr;
+    snprintf(filter_spec, sizeof(filter_spec) - 1,
+        "[in]scale=w=%d:h=%d:flags=%d[out]",
+        encode_param->width, encode_param->height,
+        SWS_FAST_BILINEAR);
     ret = m_filterGraph->initFilter(m_decodeV->getCodecContext(), m_encodeV->getCodecContext(), filter_spec);
     if (ret < 0) {
         m_filterGraph = nullptr;
@@ -738,7 +742,8 @@ void MergerCtx::setCommentInfo() {
 
     char buffer[1024] = { 0 };
     for (auto info : sei_info) {
-        snprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer), "%lld:%lld,", info.second.start_pts, info.second.end_pts);
+        snprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer), "%lld:%lld,", 
+            info.second.start_pts, info.second.end_pts + m_frame_duration);
     }
     m_output->setMetaDate("comment", buffer);
 
