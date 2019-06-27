@@ -40,6 +40,7 @@ private:
     int a_index = -1;
     bool m_video_eof{false};
     int64_t m_previous_apts{AV_NOPTS_VALUE};
+    int64_t m_creation_time_us;
 public:
     FFRecoder() = default;
     ~FFRecoder(){
@@ -68,6 +69,9 @@ private:
     int getAudioFrame(AVFrame *frame);
     int filterAudioFrame(AVFrame *frame);
     int drainAudioEncoder(const AVFrame *frame, AVPacket *packet);
+
+    int64_t parser_creation_time();
+    void set_create_timestamp(int64_t time_second);
 
     int writeInterleavedPacket(AVPacket *packet);
 

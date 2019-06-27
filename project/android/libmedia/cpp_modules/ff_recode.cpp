@@ -1,6 +1,10 @@
 #include "core/media_common/media_struct.h"
 #include "ff_recode.h"
 
+__EXTERN_C_BEGIN
+#include "libavutil/parseutils.h"
+__EXTERN_C_END
+
 namespace av{
     static void av_log_default_callback(void* ptr, int level, const char* fmt, va_list vl) {
         if(level > av_log_get_level())
@@ -72,6 +76,19 @@ namespace av{
         return 0;
     }
 
+    int64_t FFRecoder::parser_creation_time(){
+        int64_t parsed_timestamp;
+        AVDictionaryEntry* entry = m_inputFormat->getMetadata("creation_time", nullptr);
+        if (entry != nullptr && av_parse_time(&parsed_timestamp, entry->value, 0) >= 0) {
+
+        }
+        else {
+            const auto &t = std::chrono::system_clock::now();
+            parsed_timestamp = std::chrono::duration_cast<std::chrono::microseconds>(t.time_since_epoch()).count();
+        }
+        return parsed_timestamp;
+    }
+
 
     int FFRecoder::openInputFormat(JNIEnv *env, const char *inputStr) {
         int ret = 0;
@@ -81,6 +98,8 @@ namespace av{
         ret = m_inputFormat->openInputFormat(m_input.c_str());
         if(ret < 0)
             return ret;
+
+        m_creation_time_us = parser_creation_time();
 
         if(m_inputFormat->getStream(AVMEDIA_TYPE_VIDEO) == nullptr){
             return -1;
@@ -153,6 +172,21 @@ namespace av{
     }
 
 
+    void FFRecoder::set_create_timestamp(int64_t time_us){
+        time_t seconds = time_us / 1000000;
+        struct tm *ptm, tmbuf;
+        ptm = gmtime_r(&seconds, &tmbuf);
+
+        if (ptm) {
+            char buf[32] = {0};
+            if (strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", ptm) > 0){
+                snprintf(buf + strlen(buf), sizeof(buf), ".%06dZ", (int)(time_us % 1000000));
+                m_muxer->setMetaDate("creation_time", buf);
+            }
+        }
+        return;
+    }
+
     int FFRecoder::openOutputFormat(JNIEnv *env, const char *outputStr, jobject mediaInfo){
         int ret = 0;
         m_timestamp_start = AV_NOPTS_VALUE;
@@ -183,11 +217,7 @@ namespace av{
         if(m_spspps_buffer){
             m_muxer->setExternalData(m_spspps_buffer, m_spspps_buffer_size, v_index);
         }
-        ret = m_muxer->writeHeader();
-        if(ret < 0)
-            m_muxer.reset();
         return ret;
-
     }
 
     int FFRecoder::closeOutputFormat(){
@@ -234,6 +264,7 @@ namespace av{
         return ret;
     }
     int FFRecoder::writeInterleavedPacket(AVPacket *packet){
+        int ret = 0;
         if(m_muxer == nullptr){
             ALOGE("output file don't open,  write packet error. please check.");
         }
@@ -243,7 +274,13 @@ namespace av{
             char offset[64] = {0};
             snprintf(offset, sizeof(offset), "offset:%lld", m_timestamp_start);
             m_muxer->setMetaDate("description", offset);
+            set_create_timestamp(m_creation_time_us + m_timestamp_start);
+            if((ret = m_muxer->writeHeader()) < 0){
+                m_muxer.reset();
+                return ret;
+            }
         }
+
         if(m_timestamp_start == AV_NOPTS_VALUE){
             return AVERROR_UNKNOWN;
         }
