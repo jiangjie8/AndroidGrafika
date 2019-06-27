@@ -6,6 +6,9 @@ __EXTERN_C_BEGIN
 __EXTERN_C_END
 
 namespace av{
+
+    constexpr char* CREATE_TIME_TAG = "creation_time";
+
     static void av_log_default_callback(void* ptr, int level, const char* fmt, va_list vl) {
         if(level > av_log_get_level())
             return;
@@ -78,7 +81,7 @@ namespace av{
 
     int64_t FFRecoder::parser_creation_time(){
         int64_t parsed_timestamp;
-        AVDictionaryEntry* entry = m_inputFormat->getMetadata("creation_time", nullptr);
+        AVDictionaryEntry* entry = m_inputFormat->getMetadata(CREATE_TIME_TAG, nullptr);
         if (entry != nullptr && av_parse_time(&parsed_timestamp, entry->value, 0) >= 0) {
 
         }
@@ -181,7 +184,7 @@ namespace av{
             char buf[32] = {0};
             if (strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", ptm) > 0){
                 snprintf(buf + strlen(buf), sizeof(buf), ".%06dZ", (int)(time_us % 1000000));
-                m_muxer->setMetaDate("creation_time", buf);
+                m_muxer->setMetaDate(CREATE_TIME_TAG, buf);
             }
         }
         return;
