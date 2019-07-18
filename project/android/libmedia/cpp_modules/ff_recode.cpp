@@ -332,27 +332,21 @@ namespace av{
         J4A_DeleteLocalRef__p(env, &bytebuffer);
         return ret;
     }
-    int FFRecoder::filterAudioFrame(AVFrame *frame){
-        int ret = 0;
-        ret = mFilterGraph.addFrame(frame);
-        if (ret < 0) {
-            ALOGE("Error while feeding the filtergraph\n");
-            return ret;
-        }
 
-        av_frame_unref(frame);
-        ret = mFilterGraph.getFrame(frame);
-        if (ret < 0) {
-            ALOGE("Error while  get filtergraph\n");
-            return ret;
-        }
-        return ret;
-    }
     int FFRecoder::getAudioFrame(AVFrame *frame){
         if(m_audioStream == nullptr)
             return -1;
         int ret = 0;
         while(true){
+            ret = mFilterGraph.getFrame(frame);
+            if(ret == 0){
+                frame->pts = av_rescale_q(frame->pts, m_audio_decoder->getCodecContext()->time_base, { 1, AV_TIME_BASE });
+                return ret;
+            }
+            else if(ret < 0 && ret != AVERROR(EAGAIN)){
+                return ret;
+            }
+
             std::unique_ptr<AVPacket, AVPacketDeleter> packet(av_packet_alloc());
             while (true) {
 //                av_packet_unref(packet.get());
@@ -362,7 +356,7 @@ namespace av{
                     break;
                 }
                 else if(ret < 0){
-                    return ret;
+                    break;
                 }
                 int stream_index = packet->stream_index;
                 int mediaType = m_audioStream->getStream(stream_index)->codecpar->codec_type;
@@ -373,10 +367,19 @@ namespace av{
             if(ret == AVERROR_EOF){
                 ret = m_audio_decoder->flushCodec(frame);
                 if(ret == 0){
-                    ret = filterAudioFrame(frame);
-                    frame->pts = av_rescale_q(frame->pts, m_audio_decoder->getCodecContext()->time_base, { 1, AV_TIME_BASE });
+//                    ret = filterAudioFrame(frame);
+                    if (mFilterGraph.addFrame(frame) < 0) {
+                        ALOGE("Error while feeding the filtergraph\n");
+                        break;
+                    }
                 }
-                return  ret;
+                else if(ret == AVERROR_EOF){
+                    mFilterGraph.addFrame(nullptr);
+                    continue;
+                }
+                else{
+                    break;
+                }
             }
             else if(ret < 0){
                 break;
@@ -386,24 +389,27 @@ namespace av{
             av_packet_rescale_ts(packet.get(), AV_TIME_BASE_Q, m_audio_decoder->getCodecContext()->time_base);
             ret = m_audio_decoder->sendPacket(packet.get());
             if(ret == AVERROR(EAGAIN)){
-
+                ALOGE("avcodec_send_packet error, AVERROR(EAGAIN)");
             }
             else if(ret < 0){
                 ALOGE("avcodec_send_packet error");
                 break;
             }
             ret = m_audio_decoder->receiveFrame(frame);
-            if(ret == AVERROR(EAGAIN)){
+            if(ret == 0){
+                if (mFilterGraph.addFrame(frame) < 0) {
+                    ALOGE("Error while feeding the filtergraph\n");
+                    break;
+                }
+            }
+            else if(ret == AVERROR(EAGAIN)){
                 continue;
             }
             else if(ret < 0){
                 break;
             }
-            ret = filterAudioFrame(frame);
-            frame->pts = av_rescale_q(frame->pts, m_audio_decoder->getCodecContext()->time_base, { 1, AV_TIME_BASE });
-            return ret;
         }
-
+        return ret;
     }
 
     int FFRecoder::writeAudioPacket(int64_t video_pts){

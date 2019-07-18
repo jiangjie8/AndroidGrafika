@@ -67,7 +67,6 @@ private:
 
     int writeAudioPacket(int64_t video_pts);
     int getAudioFrame(AVFrame *frame);
-    int filterAudioFrame(AVFrame *frame);
     int drainAudioEncoder(const AVFrame *frame, AVPacket *packet);
 
     int64_t parser_creation_time();

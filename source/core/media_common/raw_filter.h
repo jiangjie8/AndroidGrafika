@@ -15,9 +15,6 @@ public:
     }
     int initFilter(const AVCodecContext *dec_ctx, const AVCodecContext *enc_ctx, const char *filter_spec);
     int addFrame(AVFrame *frame) {
-        if (m_graph_filter == nullptr) {
-            return -1;
-        }
         int ret = 0;
         ret = av_buffersrc_add_frame_flags(m_buffersrc_ctx, frame, 0);
         if (ret < 0) {

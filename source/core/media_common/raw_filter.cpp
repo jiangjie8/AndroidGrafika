@@ -133,6 +133,7 @@ int FilterGraph::initFilter(const AVCodecContext *dec_ctx, const AVCodecContext 
     if ((ret = avfilter_graph_config(filter_graph, nullptr)) < 0)
         goto end;
 
+    av_buffersink_set_frame_size(buffersink_ctx, enc_ctx->frame_size);
     /* Fill FilteringContext */
     m_buffersrc_ctx = buffersrc_ctx;
     m_buffersink_ctx = buffersink_ctx;
