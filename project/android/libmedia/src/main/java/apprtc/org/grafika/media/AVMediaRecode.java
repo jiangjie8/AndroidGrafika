@@ -150,6 +150,7 @@ public class AVMediaRecode implements AVRecodeInterface {
         else{
             return false;
         }
+        format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE,(int)(2.5*1024*1024));
         format.setInteger(MediaFormat.KEY_FRAME_RATE, mMediaInfo.framerate);
         mVideoDecoder = new MediaCodecVideoDecoder();
         return mVideoDecoder.initDecode(format, mSurfaceTextureHelper);
